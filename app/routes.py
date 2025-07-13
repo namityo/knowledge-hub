@@ -335,3 +335,11 @@ def register_routes(app):
                              current_user_id=current_user_id,
                              pagination=pagination,
                              system_title=SYSTEM_TITLE)
+
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(
+            os.path.join(app.root_path, '..', 'static'),
+            'favicon.ico',
+            mimetype='image/vnd.microsoft.icon'
+        )
