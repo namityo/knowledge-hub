@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}ホーム - ナレッジベース{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <!-- 人気タグ表示 -->
+        {% if popular_tags %}
+        <div class="mb-3">
+            <h6 class="text-muted mb-2"><i class="fas fa-tags"></i> 人気タグ</h6>
+            <div class="d-flex flex-wrap gap-1">
+                {% for tag in popular_tags %}
+                <a href="{{ url_for('index', tag=tag.name, search=search_query if search_query else None, my_posts=my_posts if my_posts else None, liked_posts=liked_posts if liked_posts else None) }}" 
+                   class="badge text-decoration-none {{ 'bg-dark' if tag_filter == tag.name else 'bg-primary' }}"
+                    <i class="fas fa-tag"></i> {{ tag.name }} ({{ tag.usage_count }})
+                </a>
+                {% endfor %}
+                {% if tag_filter %}
+                <a href="{{ url_for('index', search=search_query if search_query else None, my_posts=my_posts if my_posts else None, liked_posts=liked_posts if liked_posts else None) }}" 
+                   class="badge bg-light text-dark text-decoration-none">
+                    <i class="fas fa-times"></i> フィルタークリア
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- フィルターボタン -->
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('index', search=search_query if search_query else None, tag=tag_filter if tag_filter else None) }}" 
+                       class="btn btn-sm {{ 'btn-primary' if not my_posts and not liked_posts else 'btn-outline-primary' }}">
+                        <i class="fas fa-list"></i> すべて
+                    </a>
+                    <a href="{{ url_for('index', my_posts='1', search=search_query if search_query else None, tag=tag_filter if tag_filter else None) }}" 
+                       class="btn btn-sm {{ 'btn-primary' if my_posts == '1' else 'btn-outline-primary' }}">
+                        <i class="fas fa-user"></i> 自分の投稿
+                    </a>
+                    <a href="{{ url_for('index', liked_posts='1', search=search_query if search_query else None, tag=tag_filter if tag_filter else None) }}" 
+                       class="btn btn-sm {{ 'btn-primary' if liked_posts == '1' else 'btn-outline-primary' }}">
+                        <i class="fas fa-heart"></i> いいねした投稿
+                    </a>
+                </div>
+                
+                <div class="text-muted small">
+                    {{ pagination.total }}件
+                </div>
+            </div>
+            
+            {% if search_query or my_posts or liked_posts or tag_filter %}
+            <div class="d-flex gap-2 flex-wrap">
+                {% if search_query %}
+                <span class="badge bg-primary">検索: "{{ search_query }}"</span>
+                {% endif %}
+                {% if my_posts == '1' %}
+                <span class="badge bg-success">自分の投稿</span>
+                {% endif %}
+                {% if liked_posts == '1' %}
+                <span class="badge bg-danger">いいねした投稿</span>
+                {% endif %}
+                {% if tag_filter %}
+                <span class="badge bg-info">タグ: "{{ tag_filter }}"</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if knowledge_list %}
+            <div class="row">
+                {% for knowledge in knowledge_list %}
+                <div class="col-12 mb-4">
+                    <div class="card h-100" style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" 
+                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" 
+                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.12)'"
+                         onclick="window.location.href='{{ url_for('view', id=knowledge.id) }}'">
+                        <div class="card-body">
+                            <h4 class="card-title text-dark">
+                                {{ knowledge.title }}
+                            </h4>
+                            
+                            <!-- タグ表示 -->
+                            {% if knowledge.tags %}
+                            <div class="mb-2">
+                                {% for tag in knowledge.tags %}
+                                <a href="{{ url_for('index', tag=tag.name) }}" 
+                                   class="badge me-1 text-decoration-none bg-primary"
+                                   onclick="event.stopPropagation()">
+                                    <i class="fas fa-tag"></i> {{ tag.name }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            <div class="mb-3 pb-2 border-bottom">
+                                <small class="text-muted d-flex gap-3 flex-wrap">
+                                    <span>作成者: {{ knowledge.author }}</span>
+                                    <span>最終更新: {{ knowledge.updated_at|jst }}</span>
+                                    <span><i class="fas fa-heart text-danger"></i> {{ knowledge.likes|length }}</span>
+                                    <span><i class="fas fa-comments"></i> {{ knowledge.comments|length }}</span>
+                                    {% if knowledge.attachments|length > 0 %}
+                                    <span><i class="fas fa-paperclip"></i> {{ knowledge.attachments|length }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="card-text">{{ knowledge.content|preview }}</div>
+                        </div>
+                        {% if knowledge.author == current_user_id %}
+                        <div class="card-footer" onclick="event.stopPropagation()">
+                            <a href="{{ url_for('edit', id=knowledge.id) }}" class="btn btn-secondary btn-sm" 
+                               onclick="event.stopPropagation()">
+                                <i class="fas fa-edit"></i> 編集
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- ページネーション -->
+            {% if pagination.pages > 1 %}
+            <nav aria-label="ページナビゲーション" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- 前のページ -->
+                    {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('index', page=pagination.prev_num, search=search_query, my_posts=my_posts if my_posts else None) }}">
+                            <i class="fas fa-chevron-left"></i> 前
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fas fa-chevron-left"></i> 前</span>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- ページ番号 -->
+                    {% for page_num in pagination.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != pagination.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('index', page=page_num, search=search_query, my_posts=my_posts if my_posts else None) }}">{{ page_num }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">…</span>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- 次のページ -->
+                    {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('index', page=pagination.next_num, search=search_query, my_posts=my_posts if my_posts else None) }}">
+                            次 <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">次 <i class="fas fa-chevron-right"></i></span>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <!-- ページ情報 -->
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        {{ pagination.total }}件中 {{ ((pagination.page - 1) * pagination.per_page + 1) }} - {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page <= pagination.total else pagination.total }}件を表示
+                        ({{ pagination.page }}/{{ pagination.pages }}ページ)
+                    </small>
+                </div>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center mt-5">
+                {% if search_query %}
+                    <h3 class="text-muted">検索結果が見つかりませんでした</h3>
+                    <p class="text-muted">別のキーワードで検索してみてください</p>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-primary">すべて表示</a>
+                {% else %}
+                    <h3 class="text-muted">まだナレッジが投稿されていません</h3>
+                    <p class="text-muted">最初のナレッジを投稿してみましょう！</p>
+                    <a href="{{ url_for('create') }}" class="btn btn-primary">投稿する</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

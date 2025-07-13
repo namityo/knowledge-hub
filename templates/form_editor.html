@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if mode == 'create' %}
+新規投稿 - {{ system_title }}
+{% else %}
+編集 - {{ knowledge.title }} - {{ system_title }}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+.edit-page .container.flex-grow-1 {
+    max-width: none !important;
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+}
+@media (max-width: 768px) {
+    .edit-page .container.flex-grow-1 {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+}
+</style>
+<div class="edit-page">
+<div class="row g-2">
+    <div class="col-12">
+        <h1>
+        {% if mode == 'create' %}
+        記事の作成
+        {% else %}
+        記事の編集
+        {% endif %}
+        </h1>
+        
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="title" class="form-label">タイトル</label>
+                <input type="text" class="form-control" id="title" name="title" 
+                       value="{% if mode == 'edit' %}{{ knowledge.title }}{% endif %}" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="tags" class="form-label">タグ</label>
+                <input type="text" class="form-control" id="tags" name="tags" 
+                       value="{% if mode == 'edit' %}{{ knowledge.tags|tags_to_string }}{% endif %}" 
+                       placeholder="例: Python, Flask, Web開発">
+                <small class="form-text text-muted">
+                    <i class="fas fa-tag"></i> カンマで区切って複数のタグを入力してください（最大50文字/タグ）
+                </small>
+            </div>
+            
+            <!-- タブナビゲーション -->
+            <ul class="nav nav-tabs mb-3" id="editTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit-pane" type="button" role="tab">編集</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview-pane" type="button" role="tab">プレビュー</button>
+                </li>
+            </ul>
+
+            <!-- タブコンテンツ -->
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="edit-pane" role="tabpanel">
+                    <div class="mb-3">
+                        <textarea class="form-control" id="content" name="content" rows="20" required
+                                  {% if mode == 'create' %}
+                                  placeholder="# 見出し&#10;&#10;本文をここに入力してください...&#10;&#10;## サブ見出し&#10;&#10;- リスト項目1&#10;- リスト項目2&#10;&#10;```python&#10;# コード例&#10;print('Hello, World!')&#10;```"
+                                  {% endif %}>{% if mode == 'edit' %}{{ knowledge.content }}{% endif %}</textarea>
+                        <small class="form-text text-muted mt-1">
+                            <i class="fas fa-info-circle"></i> Markdown書式対応 - 
+                            <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#markdownHelpModal">書き方を見る</a>
+                        </small>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="preview-pane" role="tabpanel">
+                    <div class="mb-3">
+                        <div id="preview" class="border rounded p-2 markdown-content" style="height: 500px; overflow-y: auto; background-color: #f8f9fa; min-height: 500px;">
+                            <div class="text-muted">プレビューがここに表示されます...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 既存の添付ファイル（編集時のみ表示） -->
+            {% if mode == 'edit' and attachments %}
+            <div class="mb-3">
+                <label class="form-label">既存の添付ファイル</label>
+                <div class="row">
+                    {% for attachment in attachments %}
+                    <div class="col-md-6 col-lg-4 mb-2">
+                        <div class="card">
+                            <div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="flex-grow-1">
+                                        <small class="text-truncate d-block">
+                                            <i class="fas fa-file"></i> {{ attachment.filename }}
+                                        </small>
+                                        <small class="text-muted">{{ "%.1f"|format(attachment.file_size / 1024) }} KB</small>
+                                    </div>
+                                    <div class="ms-1">
+                                        <a href="{{ url_for('delete_attachment', attachment_id=attachment.id) }}" 
+                                           class="btn btn-sm btn-outline-danger"
+                                           onclick="return confirm('このファイルを削除しますか？')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- ファイル添付 -->
+            <div class="mb-3">
+                <label for="attachments" class="form-label">
+                {% if mode == 'create' %}
+                ファイル添付（任意）
+                {% else %}
+                新しいファイルを追加（任意）
+                {% endif %}
+                </label>
+                <input type="file" class="form-control" id="attachments" name="attachments" multiple 
+                       accept=".txt,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.svg,.webp,.zip,.rar,.7z,.csv,.json,.xml,.md">
+                <small class="form-text text-muted">
+                    対応形式: テキスト、PDF、Office文書、画像、圧縮ファイル等（最大{{ max_file_size_mb }}MB）
+                </small>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                {% if mode == 'create' %}
+                投稿する
+                {% else %}
+                    {% if knowledge.is_draft %}
+                    公開する
+                    {% else %}
+                    更新する
+                    {% endif %}
+                {% endif %}
+                </button>
+                {% if mode == 'create' %}
+                <button type="submit" name="save_draft" class="btn btn-outline-secondary">
+                    <i class="fas fa-save"></i> 下書き保存
+                </button>
+                {% elif mode == 'edit' %}
+                    {% if knowledge.is_draft %}
+                    <button type="submit" name="save_draft" class="btn btn-outline-secondary">
+                        <i class="fas fa-save"></i> 下書き保存
+                    </button>
+                    {% else %}
+                    <button type="submit" name="save_draft" class="btn btn-outline-secondary">
+                        <i class="fas fa-save"></i> 下書きに戻す
+                    </button>
+                    {% endif %}
+                {% endif %}
+                <a href="{% if mode == 'create' %}{{ url_for('index') }}{% else %}{{ url_for('view', id=knowledge.id) if not knowledge.is_draft else url_for('drafts') }}{% endif %}" 
+                   class="btn btn-secondary">キャンセル</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Markdownヘルプモーダル -->
+<div class="modal fade" id="markdownHelpModal" tabindex="-1" aria-labelledby="markdownHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="markdownHelpModalLabel">
+                    <i class="fas fa-file-code"></i> Markdown書式ガイド
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-hashtag"></i> 見出し</h6>
+                        <pre class="bg-light p-2 rounded mb-3"><code># 大見出し
+## 中見出し
+### 小見出し</code></pre>
+                        
+                        <h6><i class="fas fa-bold"></i> 文字装飾</h6>
+                        <pre class="bg-light p-2 rounded mb-3"><code>**太字**
+*斜体*
+~~取り消し線~~</code></pre>
+                        
+                        <h6><i class="fas fa-list"></i> リスト</h6>
+                        <pre class="bg-light p-2 rounded mb-3"><code>- 項目1
+- 項目2
+  - サブ項目
+
+1. 番号付きリスト
+2. 項目2</code></pre>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-link"></i> リンク</h6>
+                        <pre class="bg-light p-2 rounded mb-3"><code>[リンクテキスト](https://example.com)</code></pre>
+                        
+                        <h6><i class="fas fa-code"></i> コード</h6>
+                        <pre class="bg-light p-2 rounded mb-3"><code>`インラインコード`
+
+```javascript
+// シンタックスハイライト対応
+function hello() {
+    console.log("Hello World!");
+}
+```
+
+```python
+# Python例
+def hello():
+    print("Hello World!")
+```</code></pre>
+                        
+                        <h6><i class="fas fa-table"></i> テーブル</h6>
+                        <pre class="bg-light p-2 rounded mb-3"><code>| 列1 | 列2 |
+|-----|-----|
+| データ1 | データ2 |</code></pre>
+                        
+                        <h6><i class="fas fa-quote-right"></i> 引用</h6>
+                        <pre class="bg-light p-2 rounded"><code>> 引用文
+> 複数行も可能</code></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Highlight.js for syntax highlighting -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/highlight-github.min.css') }}">
+<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+
+<script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const contentTextarea = document.getElementById('content');
+    const previewDiv = document.getElementById('preview');
+    
+    // Markedの設定 - シンタックスハイライト対応
+    marked.setOptions({
+        highlight: function(code, lang) {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    return hljs.highlight(code, { language: lang }).value;
+                } catch (err) {}
+            }
+            return hljs.highlightAuto(code).value;
+        },
+        breaks: true,
+        gfm: true
+    });
+    
+    // 初期プレビュー表示
+    updatePreview();
+    
+    // テキストエリアの変更を監視
+    if (contentTextarea) {
+        contentTextarea.addEventListener('input', updatePreview);
+    }
+    
+    // プレビュータブがクリックされたときにプレビューを更新
+    const previewTab = document.getElementById('preview-tab');
+    if (previewTab) {
+        previewTab.addEventListener('click', function() {
+            setTimeout(updatePreview, 100);
+        });
+    }
+    
+    function updatePreview() {
+        if (!contentTextarea || !previewDiv) return;
+        
+        const markdownText = contentTextarea.value;
+        if (markdownText.trim() === '') {
+            previewDiv.innerHTML = '<div class="text-muted">プレビューがここに表示されます...</div>';
+            return;
+        }
+        
+        try {
+            const htmlContent = marked.parse(markdownText);
+            previewDiv.innerHTML = htmlContent;
+        } catch (error) {
+            previewDiv.innerHTML = '<div class="text-danger">Markdownの解析エラーが発生しました</div>';
+        }
+    }
+});
+
+// Toast通知を表示する関数
+function showToast(message, type = 'error') {
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : 'success'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 'check-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+    toast.show();
+    
+    // 非表示後に要素を削除
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+
+// ファイルサイズチェック
+document.getElementById('attachments').addEventListener('change', function(e) {
+    const maxSizeBytes = {{ max_file_size_mb }} * 1024 * 1024;
+    const files = e.target.files;
+    
+    for (let i = 0; i < files.length; i++) {
+        if (files[i].size > maxSizeBytes) {
+            showToast(`ファイル "${files[i].name}" のサイズが大きすぎます。最大{{ max_file_size_mb }}MBまでアップロード可能です。`);
+            e.target.value = ''; // ファイル選択をクリア
+            return;
+        }
+    }
+});
+</script>
+</div>
+{% endblock %}

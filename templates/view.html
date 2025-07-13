@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}{{ knowledge.title }} - {{ system_title }}{% endblock %}
+
+{% block content %}
+<!-- Highlight.js for syntax highlighting -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/highlight-github.min.css') }}">
+<script src="{{ url_for('static', filename='js/highlight.min.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 既存のコードブロックにシンタックスハイライトを適用
+    hljs.highlightAll();
+});
+</script>
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <h1>{{ knowledge.title }}</h1>
+                
+                <!-- タグ表示 -->
+                {% if knowledge.tags %}
+                <div class="mb-3">
+                    {% for tag in knowledge.tags %}
+                    <a href="{{ url_for('index', tag=tag.name) }}" 
+                       class="badge me-1 text-decoration-none bg-primary">
+                        <i class="fas fa-tag"></i> {{ tag.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <p class="text-muted d-flex gap-3 flex-wrap">
+                    <span>作成者: {{ knowledge.author }}</span>
+                    <span>作成日: {{ knowledge.created_at|jst }}</span>
+                    {% if knowledge.updated_at != knowledge.created_at %}
+                    <span>更新日: {{ knowledge.updated_at|jst }}</span>
+                    {% endif %}
+                    <span><i class="fas fa-heart text-danger"></i> {{ knowledge.likes|length }}</span>
+                    <span><i class="fas fa-comments"></i> {{ knowledge.comments|length }}</span>
+                </p>
+            </div>
+            {% if knowledge.author == current_user_id %}
+            <div>
+                <a href="{{ url_for('edit', id=knowledge.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-edit"></i> 編集
+                </a>
+                <a href="{{ url_for('delete', id=knowledge.id) }}" class="btn btn-danger" 
+                   onclick="return confirm('本当に削除しますか？')">
+                    <i class="fas fa-trash"></i> 削除
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="content markdown-content">
+                    {{ knowledge.content|markdown }}
+                </div>
+                
+                <!-- 添付ファイル（本文末尾） -->
+                {% if attachments %}
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="text-muted mb-2"><i class="fas fa-paperclip"></i> 添付ファイル</h6>
+                    <ul class="list-unstyled mb-0">
+                        {% for attachment in attachments %}
+                        <li class="d-flex align-items-center justify-content-between py-1">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file text-muted me-2"></i>
+                                <a href="{{ url_for('download_file', attachment_id=attachment.id) }}" 
+                                   class="text-decoration-none me-2">{{ attachment.filename }}</a>
+                                <small class="text-muted">({{ "%.1f"|format(attachment.file_size / 1024) }} KB)</small>
+                            </div>
+                            {% if knowledge.author == current_user_id or attachment.uploaded_by == current_user_id %}
+                            <a href="{{ url_for('delete_attachment', attachment_id=attachment.id) }}" 
+                               class="btn btn-sm btn-outline-danger ms-2"
+                               onclick="return confirm('このファイルを削除しますか？')"
+                               title="削除">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                {% if knowledge.author != current_user_id %}
+                <form method="POST" action="{{ url_for('toggle_like', knowledge_id=knowledge.id) }}" class="d-inline">
+                    {% if user_liked %}
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="fas fa-heart"></i> いいね済み ({{ knowledge.likes|length }})
+                        </button>
+                    {% else %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="far fa-heart"></i> いいね ({{ knowledge.likes|length }})
+                        </button>
+                    {% endif %}
+                </form>
+                {% else %}
+                <span class="text-muted">
+                    <i class="fas fa-heart text-danger"></i> いいね ({{ knowledge.likes|length }})
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- コメントセクション -->
+        <div class="mt-5">
+            
+            <!-- コメント投稿フォーム -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">コメントを投稿</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('add_comment', knowledge_id=knowledge.id) }}">
+                        <div class="mb-3">
+                            <textarea class="form-control" id="content" name="content" rows="3" required 
+                                      placeholder="コメントを入力してください...（Markdown対応）"></textarea>
+                            <small class="form-text text-muted">投稿者: {{ current_user_id }}</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">コメント投稿</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- コメント一覧 -->
+            {% if comments %}
+                {% for comment in comments %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="comment-content markdown-content">
+                                    {{ comment.content|markdown }}
+                                </div>
+                            </div>
+                            {% if comment.author == current_user_id %}
+                            <div class="ms-2">
+                                <a href="{{ url_for('delete_comment', comment_id=comment.id) }}" 
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('このコメントを削除しますか？')">
+                                    <i class="fas fa-trash"></i> 削除
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <div class="text-muted small">
+                                <i class="fas fa-user"></i> {{ comment.author }} | 
+                                <i class="fas fa-clock"></i> {{ comment.created_at|jst }}
+                            </div>
+                            <div>
+                                {% if comment.author != current_user_id %}
+                                <form method="POST" action="{{ url_for('toggle_comment_like', comment_id=comment.id) }}" class="d-inline">
+                                    {% if comment_likes[comment.id] %}
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-heart"></i> {{ comment.comment_likes|length }}
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                            <i class="far fa-heart"></i> {{ comment.comment_likes|length }}
+                                        </button>
+                                    {% endif %}
+                                </form>
+                                {% else %}
+                                <span class="text-muted small">
+                                    <i class="fas fa-heart text-danger"></i> {{ comment.comment_likes|length }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-muted text-center py-4">
+                    <i class="fas fa-comments fa-2x mb-2"></i>
+                    <p>まだコメントがありません。最初のコメントを投稿してみましょう！</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-primary">一覧に戻る</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

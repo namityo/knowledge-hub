@@ -1,0 +1,163 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.card-title {
+    color: #495057;
+    font-weight: 600;
+}
+
+.btn {
+    border-radius: 25px;
+    padding: 8px 20px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+}
+
+.content {
+    line-height: 1.8;
+    font-size: 16px;
+    color: #495057;
+}
+
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 150px;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Markdownスタイル */
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: #343a40;
+}
+
+.markdown-content h1 {
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+}
+
+.markdown-content h2 {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 0.3rem;
+}
+
+.markdown-content pre {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.markdown-content code {
+    background-color: #f8f9fa;
+    color: #e83e8c;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.markdown-content pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+}
+
+.markdown-content blockquote {
+    border-left: 4px solid #007bff;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.markdown-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.markdown-content table th,
+.markdown-content table td {
+    border: 1px solid #dee2e6;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.markdown-content table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    padding-left: 2rem;
+    margin: 1rem 0;
+}
+
+.markdown-content li {
+    margin-bottom: 0.5rem;
+}
+
+/* 編集画面のプレビュー専用スタイル */
+#preview {
+    border: 2px solid #dee2e6 !important;
+    font-family: inherit;
+    word-wrap: break-word;
+}
+
+#preview img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .col-md-6 {
+        margin-bottom: 1rem;
+    }
+    
+    #preview {
+        height: 300px !important;
+        min-height: 300px !important;
+    }
+    
+    textarea#content {
+        height: 300px;
+    }
+}

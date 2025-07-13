@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}下書き一覧 - {{ system_title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-file-alt"></i> 下書き一覧</h2>
+            <div class="text-muted small">
+                {{ pagination.total }}件の下書き
+            </div>
+        </div>
+        
+        {% if draft_list %}
+            <div class="row">
+                {% for draft in draft_list %}
+                <div class="col-12 mb-4">
+                    <div class="card h-100 border-warning" style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" 
+                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" 
+                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.12)'"
+                         onclick="window.location.href='{{ url_for('edit', id=draft.id) }}'">
+                        <div class="card-header bg-warning bg-opacity-10 border-warning">
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-edit"></i> 下書き
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <h4 class="card-title text-dark">
+                                {{ draft.title }}
+                            </h4>
+                            
+                            <!-- タグ表示 -->
+                            {% if draft.tags %}
+                            <div class="mb-2">
+                                {% for tag in draft.tags %}
+                                <span class="badge me-1 bg-primary">
+                                    <i class="fas fa-tag"></i> {{ tag.name }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            <div class="mb-3 pb-2 border-bottom">
+                                <small class="text-muted d-flex gap-3 flex-wrap">
+                                    <span>作成者: {{ draft.author }}</span>
+                                    <span>最終更新: {{ draft.updated_at|jst }}</span>
+                                    {% if draft.attachments|length > 0 %}
+                                    <span><i class="fas fa-paperclip"></i> {{ draft.attachments|length }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="card-text">{{ draft.content|preview }}</div>
+                        </div>
+                        <div class="card-footer" onclick="event.stopPropagation()">
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('edit', id=draft.id) }}" class="btn btn-primary btn-sm" 
+                                   onclick="event.stopPropagation()">
+                                    <i class="fas fa-edit"></i> 編集
+                                </a>
+                                <a href="{{ url_for('delete', id=draft.id) }}" class="btn btn-outline-danger btn-sm" 
+                                   onclick="event.stopPropagation(); return confirm('この下書きを削除しますか？')"">
+                                    <i class="fas fa-trash"></i> 削除
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- ページネーション -->
+            {% if pagination.pages > 1 %}
+            <nav aria-label="ページナビゲーション" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- 前のページ -->
+                    {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('drafts', page=pagination.prev_num) }}">
+                            <i class="fas fa-chevron-left"></i> 前
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fas fa-chevron-left"></i> 前</span>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- ページ番号 -->
+                    {% for page_num in pagination.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != pagination.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('drafts', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">…</span>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- 次のページ -->
+                    {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('drafts', page=pagination.next_num) }}">
+                            次 <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">次 <i class="fas fa-chevron-right"></i></span>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <!-- ページ情報 -->
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        {{ pagination.total }}件中 {{ ((pagination.page - 1) * pagination.per_page + 1) }} - {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page <= pagination.total else pagination.total }}件を表示
+                        ({{ pagination.page }}/{{ pagination.pages }}ページ)
+                    </small>
+                </div>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center mt-5">
+                <h3 class="text-muted">下書きはありません</h3>
+                <p class="text-muted">新しいナレッジを作成して下書き保存してみましょう！</p>
+                <a href="{{ url_for('create') }}" class="btn btn-primary">新規投稿</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
