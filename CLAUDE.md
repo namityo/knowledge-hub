@@ -15,18 +15,36 @@ pip install -r requirements.txt
 ```
 
 ### Running the Application
+
+#### Traditional Flask Development Server
 ```bash
 # Start the Flask development server
 python app.py
 # Access at http://127.0.0.1:5000
 ```
 
+#### Uvicorn ASGI Server (Recommended for Production)
+```bash
+# Install dependencies (if not already installed)
+pip install -r requirements.txt
+
+# Start with uvicorn (production-ready ASGI server)
+uvicorn asgi:app --host 127.0.0.1 --port 5000 --reload
+
+# Or run the asgi.py file directly
+python asgi.py
+
+# Production deployment (without reload)
+uvicorn asgi:app --host 0.0.0.0 --port 5000 --workers 4
+```
+
 **Important:** 
 - Server startup is handled manually by the user
-- Hot reload is enabled automatically with `use_reloader=True` setting
+- Hot reload is enabled automatically with `use_reloader=True` setting (Flask) or `--reload` flag (Uvicorn)
 - Files (.py, .html, .css) are automatically monitored for changes
 - Server will restart automatically when files are modified
-- **Testing and Development**: Running `python app.py` is the user's responsibility for testing new features
+- **Testing and Development**: Running `python app.py` or `uvicorn asgi:app --reload` is the user's responsibility for testing new features
+- **Production**: Uvicorn provides better performance and async support compared to Flask's built-in server
 
 ### User Authentication
 The application uses HTTP header-based user identification without requiring a user table.

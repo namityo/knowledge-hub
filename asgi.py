@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+ASGI Entry Point for Uvicorn
+uvicorn用のASGIエントリーポイント
+
+Usage:
+  uvicorn asgi:app --host 127.0.0.1 --port 5000 --reload
+"""
+
+from asgiref.wsgi import WsgiToAsgi
+from app import create_app
+from app.models import db
+
+def create_asgi_app():
+    """ASGI対応のアプリケーション作成"""
+    # 通常のFlaskアプリケーションを作成
+    flask_app = create_app()
+    
+    # データベースの初期化（同期処理として実行）
+    with flask_app.app_context():
+        db.create_all()
+    
+    # WSGIアプリケーションをASGIに変換
+    asgi_app = WsgiToAsgi(flask_app)
+    
+    return asgi_app
+
+# ASGIアプリケーションの作成
+app = create_asgi_app()
+
+if __name__ == '__main__':
+    import uvicorn
+    
+    # Uvicornでの起動設定
+    uvicorn.run(
+        "asgi:app",
+        host="127.0.0.1",
+        port=5000,
+        reload=True,
+        log_level="info",
+        access_log=True
+    )
