@@ -173,17 +173,24 @@ def register_context_processors(app):
     """コンテキストプロセッサーを登録"""
     from .models import Knowledge
     from .utils import get_current_user_id
+    from .config import SYSTEM_TITLE
     
     @app.context_processor
-    def inject_draft_count():
-        """全てのテンプレートで下書き件数を利用可能にする"""
+    def inject_global_variables():
+        """全てのテンプレートで共通変数を利用可能にする"""
         try:
             current_user_id = get_current_user_id()
             draft_count = Knowledge.query.filter(
                 Knowledge.is_draft == True,
                 Knowledge.author == current_user_id
             ).count()
-            return dict(draft_count=draft_count)
+            return dict(
+                draft_count=draft_count,
+                system_title=SYSTEM_TITLE
+            )
         except:
-            # リクエストコンテキスト外などでエラーが発生した場合は0を返す
-            return dict(draft_count=0)
+            # リクエストコンテキスト外などでエラーが発生した場合はデフォルト値を返す
+            return dict(
+                draft_count=0,
+                system_title=SYSTEM_TITLE
+            )
