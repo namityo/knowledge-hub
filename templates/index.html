@@ -5,12 +5,12 @@
 {% block content %}
 <div class="row">
     <div class="col-md-12">
-        <!-- 人気タグ表示 -->
-        {% if popular_tags %}
+        <!-- タグ一覧表示 -->
+        {% if all_tags %}
         <div class="mb-3">
-            <h6 class="text-muted mb-2"><i class="fas fa-tags"></i> 人気タグ</h6>
+            <h6 class="text-muted mb-2"><i class="fas fa-tags"></i> タグ一覧</h6>
             <div class="d-flex flex-wrap gap-1">
-                {% for tag in popular_tags %}
+                {% for tag in all_tags %}
                 <a href="{{ url_for('index', tag=tag.name, search=search_query if search_query else None, my_posts=my_posts if my_posts else None, liked_posts=liked_posts if liked_posts else None) }}" 
                    class="badge text-decoration-none {{ 'bg-dark' if tag_filter == tag.name else 'bg-primary' }}"
                     <i class="fas fa-tag"></i> {{ tag.name }} ({{ tag.usage_count }})

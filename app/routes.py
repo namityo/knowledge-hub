@@ -59,8 +59,8 @@ def register_routes(app):
         
         knowledge_list = pagination.items
         
-        # 人気タグ一覧を取得（使用回数上位10位）
-        popular_tags = Tag.query.filter(Tag.usage_count > 0).order_by(Tag.usage_count.desc()).limit(10).all()
+        # タグ一覧を取得（使用回数順）
+        all_tags = Tag.query.filter(Tag.usage_count > 0).order_by(Tag.usage_count.desc()).all()
         
         return render_template('index.html', 
                              knowledge_list=knowledge_list, 
@@ -69,7 +69,7 @@ def register_routes(app):
                              my_posts=my_posts,
                              liked_posts=liked_posts,
                              tag_filter=tag_filter,
-                             popular_tags=popular_tags,
+                             all_tags=all_tags,
                              pagination=pagination,
                              system_title=SYSTEM_TITLE)
 
