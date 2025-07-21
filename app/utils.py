@@ -60,6 +60,76 @@ def handle_file_uploads(knowledge_id, author, app_config):
                 uploaded_by=author
             )
             db.session.add(attachment)
+    
+    # ドラッグ&ドロップでアップロードされた画像の関連付けを更新
+    orphaned_attachments = Attachment.query.filter_by(knowledge_id=None, uploaded_by=author).all()
+    for attachment in orphaned_attachments:
+        attachment.knowledge_id = knowledge_id
+    
+    # 10%の確率で古い孤立ファイルをクリーンアップ（負荷分散）
+    import random
+    if random.random() < 0.1:
+        try:
+            cleanup_orphaned_attachments()
+        except Exception as e:
+            audit_logger.error(f"Background cleanup failed: {e}")
+
+def cleanup_orphaned_attachments():
+    """孤立した添付ファイルをクリーンアップ"""
+    import os
+    from datetime import datetime, timezone, timedelta
+    from flask import current_app
+    
+    cleaned_count = 0
+    
+    # 1. 24時間以上前に作成されたknowledge_id=Nullのファイル
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
+    orphaned_files = Attachment.query.filter(
+        Attachment.knowledge_id.is_(None),
+        Attachment.created_at < cutoff_time
+    ).all()
+    
+    for attachment in orphaned_files:
+        if current_app:
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], attachment.stored_filename)
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    audit_logger.info(f"Cleaned up orphaned file: {attachment.stored_filename}")
+            except OSError as e:
+                audit_logger.error(f"Failed to delete orphaned file {file_path}: {e}")
+        
+        db.session.delete(attachment)
+        cleaned_count += 1
+    
+    # 2. データベースレコードが存在しないファイル（記事削除時の残骸）
+    if current_app:
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        if os.path.exists(upload_folder):
+            # データベースに存在するファイル名のセットを作成
+            existing_files = set()
+            all_attachments = Attachment.query.all()
+            for attachment in all_attachments:
+                existing_files.add(attachment.stored_filename)
+            
+            # アップロードフォルダ内の実ファイルをチェック
+            for filename in os.listdir(upload_folder):
+                file_path = os.path.join(upload_folder, filename)
+                if os.path.isfile(file_path) and filename not in existing_files:
+                    try:
+                        # ファイルが7日以上古い場合のみ削除（安全のため）
+                        file_mtime = os.path.getmtime(file_path)
+                        file_age = datetime.now().timestamp() - file_mtime
+                        if file_age > (7 * 24 * 3600):  # 7日
+                            os.remove(file_path)
+                            audit_logger.info(f"Cleaned up dangling file: {filename}")
+                            cleaned_count += 1
+                    except OSError as e:
+                        audit_logger.error(f"Failed to delete dangling file {file_path}: {e}")
+    
+    if cleaned_count > 0:
+        db.session.commit()
+        audit_logger.info(f"Cleaned up {cleaned_count} orphaned/dangling files")
 
 def handle_tags(knowledge, tags_string, author):
     """タグ処理の共通化"""

@@ -1,9 +1,11 @@
 import os
-from flask import render_template, request, redirect, url_for, flash, abort, send_from_directory
+import uuid
+from flask import render_template, request, redirect, url_for, flash, abort, send_from_directory, jsonify
+from werkzeug.utils import secure_filename
 from datetime import datetime, timezone
 from .models import db, Knowledge, Comment, Like, CommentLike, Attachment, Tag
 from .utils import get_current_user_id, handle_file_uploads, handle_tags, audit_logger
-from .config import SYSTEM_TITLE, MAX_FILE_SIZE_MB
+from .config import SYSTEM_TITLE, MAX_FILE_SIZE_MB, allowed_file
 
 def register_routes(app):
     """ルートをFlaskアプリに登録"""
@@ -183,6 +185,18 @@ def register_routes(app):
             audit_logger.warning(f"Unauthorized delete attempt - User:{current_user_id}, Knowledge ID:{id}, Owner:{knowledge.author}")
             abort(403)
         
+        # 関連する添付ファイルを事前に取得してファイルシステムから削除
+        attachments = knowledge.attachments
+        for attachment in attachments:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], attachment.stored_filename)
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    audit_logger.info(f"Deleted attachment file: {attachment.stored_filename}")
+            except OSError as e:
+                audit_logger.error(f"Failed to delete attachment file {file_path}: {e}")
+        
+        # 記事を削除（cascade='all, delete-orphan'によりAttachmentレコードも自動削除）
         db.session.delete(knowledge)
         db.session.commit()
         flash('ナレッジが削除されました！', 'success')
@@ -335,6 +349,83 @@ def register_routes(app):
                              current_user_id=current_user_id,
                              pagination=pagination,
                              system_title=SYSTEM_TITLE)
+
+    @app.route('/image/<int:attachment_id>')
+    def serve_image(attachment_id):
+        """画像ファイルの表示用エンドポイント"""
+        attachment = Attachment.query.get_or_404(attachment_id)
+        
+        # 画像ファイルかどうかチェック
+        if not attachment.mime_type.startswith('image/'):
+            abort(404)
+        
+        try:
+            return send_from_directory(
+                app.config['UPLOAD_FOLDER'],
+                attachment.stored_filename,
+                mimetype=attachment.mime_type
+            )
+        except FileNotFoundError:
+            abort(404)
+
+    @app.route('/upload_image', methods=['POST'])
+    def upload_image():
+        """画像アップロード専用エンドポイント（ドラッグ&ドロップ用）"""
+        try:
+            if 'image' not in request.files:
+                return jsonify({'success': False, 'message': 'ファイルがありません'}), 400
+            
+            file = request.files['image']
+            if file.filename == '':
+                return jsonify({'success': False, 'message': 'ファイルが選択されていません'}), 400
+            
+            # 画像ファイルかどうかチェック
+            if not file.content_type.startswith('image/'):
+                return jsonify({'success': False, 'message': '画像ファイルのみアップロード可能です'}), 400
+            
+            if not allowed_file(file.filename):
+                return jsonify({'success': False, 'message': 'サポートされていない画像形式です'}), 400
+            
+            # 安全なファイル名を生成
+            original_filename = secure_filename(file.filename)
+            file_extension = original_filename.rsplit('.', 1)[1].lower()
+            stored_filename = f"{uuid.uuid4().hex}.{file_extension}"
+            
+            # ファイルを保存
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], stored_filename)
+            file.save(file_path)
+            
+            # ファイルサイズとMIMEタイプを取得
+            file_size = os.path.getsize(file_path)
+            mime_type = file.content_type
+            
+            # 一時的な添付ファイル情報をDBに保存（knowledge_idは後で設定）
+            attachment = Attachment(
+                filename=original_filename,
+                stored_filename=stored_filename,
+                file_size=file_size,
+                mime_type=mime_type,
+                knowledge_id=None,  # 一時的にNone
+                uploaded_by=get_current_user_id()
+            )
+            db.session.add(attachment)
+            db.session.commit()
+            
+            # Markdownで使用する画像リンクを生成
+            image_url = url_for('serve_image', attachment_id=attachment.id)
+            markdown_text = f"![{original_filename}]({image_url})"
+            
+            return jsonify({
+                'success': True,
+                'attachment_id': attachment.id,
+                'image_url': image_url,
+                'markdown': markdown_text,
+                'filename': original_filename
+            })
+            
+        except Exception as e:
+            audit_logger.error(f"Image upload failed: {str(e)}")
+            return jsonify({'success': False, 'message': 'アップロードに失敗しました'}), 500
 
     @app.route('/favicon.ico')
     def favicon():

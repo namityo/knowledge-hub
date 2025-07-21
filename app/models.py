@@ -62,7 +62,7 @@ class Attachment(db.Model):
     stored_filename = db.Column(db.String(255), nullable=False)  # 保存時のファイル名（重複回避）
     file_size = db.Column(db.Integer, nullable=False)  # ファイルサイズ（バイト）
     mime_type = db.Column(db.String(100), nullable=False)  # MIMEタイプ
-    knowledge_id = db.Column(db.Integer, db.ForeignKey('knowledge.id'), nullable=False)
+    knowledge_id = db.Column(db.Integer, db.ForeignKey('knowledge.id'), nullable=True)  # ドラッグ&ドロップ時は一時的にNullを許可
     uploaded_by = db.Column(db.String(100), nullable=False)  # アップロードしたユーザー
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 

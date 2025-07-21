@@ -146,6 +146,23 @@ textarea.form-control {
     height: auto;
 }
 
+/* Markdownコンテンツ内の画像サイズ制限 */
+.markdown-content img {
+    max-width: 100%;
+    max-height: 500px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin: 1rem 0;
+    display: block;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.markdown-content img:hover {
+    transform: scale(1.02);
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
     .col-md-6 {
@@ -159,5 +176,11 @@ textarea.form-control {
     
     textarea#content {
         height: 300px;
+    }
+    
+    /* モバイルでの画像サイズ調整 */
+    .markdown-content img {
+        max-height: 300px;
+        margin: 0.5rem 0;
     }
 }

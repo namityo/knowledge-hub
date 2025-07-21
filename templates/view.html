@@ -10,7 +10,61 @@
 document.addEventListener('DOMContentLoaded', function() {
     // 既存のコードブロックにシンタックスハイライトを適用
     hljs.highlightAll();
+    
+    // 画像クリック時のモーダル表示
+    const images = document.querySelectorAll('.markdown-content img');
+    images.forEach(img => {
+        img.addEventListener('click', function() {
+            showImageModal(this.src, this.alt || '画像');
+        });
+    });
 });
+
+function showImageModal(imageSrc, imageAlt) {
+    const modalHtml = `
+        <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-fullscreen">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title text-white">${imageAlt}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body d-flex align-items-center justify-content-center p-0">
+                        <img src="${imageSrc}" class="img-fluid" alt="${imageAlt}" style="max-height: 95vh; max-width: 95vw; cursor: zoom-out;" onclick="document.querySelector('[data-bs-dismiss=modal]').click();">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 既存のモーダルを削除
+    const existingModal = document.getElementById('imageModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // 新しいモーダルを追加
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // モーダルを表示
+    const modal = new bootstrap.Modal(document.getElementById('imageModal'), {
+        keyboard: true,  // Escキーで閉じる
+        backdrop: true   // 背景クリックで閉じる
+    });
+    modal.show();
+    
+    // モーダルが非表示になったら削除
+    document.getElementById('imageModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+    
+    // 背景クリックでも閉じる
+    document.getElementById('imageModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            modal.hide();
+        }
+    });
+}
 </script>
 <div class="row">
     <div class="col-md-12">

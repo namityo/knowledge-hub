@@ -64,13 +64,26 @@
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="edit-pane" role="tabpanel">
                     <div class="mb-3">
-                        <textarea class="form-control" id="content" name="content" rows="20" required
-                                  {% if mode == 'create' %}
-                                  placeholder="# 見出し&#10;&#10;本文をここに入力してください...&#10;&#10;## サブ見出し&#10;&#10;- リスト項目1&#10;- リスト項目2&#10;&#10;```python&#10;# コード例&#10;print('Hello, World!')&#10;```"
-                                  {% endif %}>{% if mode == 'edit' %}{{ knowledge.content }}{% endif %}</textarea>
+                        <div id="drop-zone" class="position-relative">
+                            <textarea class="form-control" id="content" name="content" rows="20" required
+                                      {% if mode == 'create' %}
+                                      placeholder="# 見出し&#10;&#10;本文をここに入力してください...&#10;&#10;画像をドラッグ&ドロップで簡単挿入！&#10;&#10;## サブ見出し&#10;&#10;- リスト項目1&#10;- リスト項目2&#10;&#10;```python&#10;# コード例&#10;print('Hello, World!')&#10;```"
+                                      {% endif %}>{% if mode == 'edit' %}{{ knowledge.content }}{% endif %}</textarea>
+                            <div id="drop-overlay" class="position-absolute top-0 start-0 w-100 h-100 d-none" 
+                                 style="background: rgba(0, 123, 255, 0.1); border: 2px dashed #007bff; border-radius: 8px; z-index: 1000;">
+                                <div class="d-flex align-items-center justify-content-center h-100">
+                                    <div class="text-center text-primary">
+                                        <i class="fas fa-image fa-3x mb-2"></i>
+                                        <div class="h5">画像をここにドロップしてください</div>
+                                        <div class="text-muted">JPG, PNG, GIF, WebP形式に対応</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <small class="form-text text-muted mt-1">
                             <i class="fas fa-info-circle"></i> Markdown書式対応 - 
                             <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#markdownHelpModal">書き方を見る</a>
+                            <span class="ms-2"><i class="fas fa-image"></i> 画像ファイルをドラッグ&ドロップで挿入可能</span>
                         </small>
                     </div>
                 </div>
@@ -240,9 +253,29 @@ def hello():
 
 <script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
 <script>
+// グローバル変数とプレビュー関数
+let contentTextarea, previewDiv;
+
+function updatePreview() {
+    if (!contentTextarea || !previewDiv) return;
+    
+    const markdownText = contentTextarea.value;
+    if (markdownText.trim() === '') {
+        previewDiv.innerHTML = '<div class="text-muted">プレビューがここに表示されます...</div>';
+        return;
+    }
+    
+    try {
+        const htmlContent = marked.parse(markdownText);
+        previewDiv.innerHTML = htmlContent;
+    } catch (error) {
+        previewDiv.innerHTML = '<div class="text-danger">Markdownの解析エラーが発生しました</div>';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    const contentTextarea = document.getElementById('content');
-    const previewDiv = document.getElementById('preview');
+    contentTextarea = document.getElementById('content');
+    previewDiv = document.getElementById('preview');
     
     // Markedの設定 - シンタックスハイライト対応
     marked.setOptions({
@@ -274,34 +307,63 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    function updatePreview() {
-        if (!contentTextarea || !previewDiv) return;
-        
-        const markdownText = contentTextarea.value;
-        if (markdownText.trim() === '') {
-            previewDiv.innerHTML = '<div class="text-muted">プレビューがここに表示されます...</div>';
-            return;
-        }
-        
-        try {
-            const htmlContent = marked.parse(markdownText);
-            previewDiv.innerHTML = htmlContent;
-        } catch (error) {
-            previewDiv.innerHTML = '<div class="text-danger">Markdownの解析エラーが発生しました</div>';
-        }
+    // ドラッグ&ドロップの初期化
+    initializeDragAndDrop();
+    
+    // ファイルサイズチェックの初期化
+    const attachmentsInput = document.getElementById('attachments');
+    if (attachmentsInput) {
+        attachmentsInput.addEventListener('change', function(e) {
+            const maxSizeBytes = {{ max_file_size_mb }} * 1024 * 1024;
+            const files = e.target.files;
+            
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].size > maxSizeBytes) {
+                    showToast(`ファイル "${files[i].name}" のサイズが大きすぎます。最大{{ max_file_size_mb }}MBまでアップロード可能です。`);
+                    e.target.value = ''; // ファイル選択をクリア
+                    return;
+                }
+            }
+        });
     }
 });
 
 // Toast通知を表示する関数
 function showToast(message, type = 'error') {
+    // アプリのカラーテーマに合わせた色とアイコンを決定
+    let bgStyle, iconClass, iconColor, borderColor;
+    switch(type) {
+        case 'success':
+            bgStyle = 'background-color: #f8f9fa; border-left: 4px solid #28a745;';
+            iconClass = 'fa-check-circle';
+            iconColor = 'color: #28a745;';
+            break;
+        case 'info':
+            bgStyle = 'background-color: #f8f9fa; border-left: 4px solid #007bff;';
+            iconClass = 'fa-info-circle';
+            iconColor = 'color: #007bff;';
+            break;
+        case 'warning':
+            bgStyle = 'background-color: #f8f9fa; border-left: 4px solid #ffc107;';
+            iconClass = 'fa-exclamation-triangle';
+            iconColor = 'color: #ffc107;';
+            break;
+        case 'error':
+        default:
+            bgStyle = 'background-color: #f8f9fa; border-left: 4px solid #dc3545;';
+            iconClass = 'fa-exclamation-triangle';
+            iconColor = 'color: #dc3545;';
+            break;
+    }
+    
     const toastHtml = `
-        <div class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : 'success'} border-0" role="alert">
+        <div class="toast align-items-center border-0 shadow-sm" role="alert" style="${bgStyle}">
             <div class="d-flex">
-                <div class="toast-body">
-                    <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 'check-circle'} me-2"></i>
+                <div class="toast-body" style="color: #495057;">
+                    <i class="fas ${iconClass} me-2" style="${iconColor}"></i>
                     ${message}
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>
     `;
@@ -325,19 +387,129 @@ function showToast(message, type = 'error') {
     });
 }
 
-// ファイルサイズチェック
-document.getElementById('attachments').addEventListener('change', function(e) {
-    const maxSizeBytes = {{ max_file_size_mb }} * 1024 * 1024;
-    const files = e.target.files;
+// ドラッグ&ドロップ機能の実装
+let dropZone, dropOverlay;
+
+function initializeDragAndDrop() {
+    dropZone = document.getElementById('drop-zone');
+    dropOverlay = document.getElementById('drop-overlay');
     
-    for (let i = 0; i < files.length; i++) {
-        if (files[i].size > maxSizeBytes) {
-            showToast(`ファイル "${files[i].name}" のサイズが大きすぎます。最大{{ max_file_size_mb }}MBまでアップロード可能です。`);
-            e.target.value = ''; // ファイル選択をクリア
+    if (!dropZone || !dropOverlay) return;
+
+    // ドラッグオーバー時の処理
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // 画像ファイルかどうかチェック
+        const hasImages = Array.from(e.dataTransfer.items).some(item => 
+            item.kind === 'file' && item.type.startsWith('image/')
+        );
+        
+        if (hasImages) {
+            dropOverlay.classList.remove('d-none');
+        }
+    });
+
+    // ドラッグリーブ時の処理
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // ドロップゾーンを完全に離れた場合のみオーバーレイを非表示
+        if (!dropZone.contains(e.relatedTarget)) {
+            dropOverlay.classList.add('d-none');
+        }
+    });
+
+    // ドロップ時の処理
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropOverlay.classList.add('d-none');
+        
+        const files = Array.from(e.dataTransfer.files);
+        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+        
+        if (imageFiles.length === 0) {
+            showToast('画像ファイルのみドロップできます。', 'error');
             return;
         }
+        
+        // 各画像ファイルをアップロード
+        imageFiles.forEach(file => uploadImage(file));
+    });
+}
+
+// 画像アップロード関数
+function uploadImage(file) {
+    const maxSizeBytes = {{ max_file_size_mb }} * 1024 * 1024;
+    
+    if (file.size > maxSizeBytes) {
+        showToast(`画像 "${file.name}" のサイズが大きすぎます。最大{{ max_file_size_mb }}MBまでアップロード可能です。`, 'error');
+        return;
     }
-});
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    // アップロード開始のフィードバック
+    showToast(`画像 "${file.name}" をアップロード中...`, 'info');
+    
+    fetch('{{ url_for("upload_image") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-User-ID': '{{ current_user_id }}'
+        }
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        console.log('Upload response data:', data);
+        
+        if (data.success) {
+            // Markdownテキストをテキストエリアに挿入
+            insertTextAtCursor(contentTextarea, data.markdown + '\n');
+            
+            // プレビューを更新
+            updatePreview();
+            
+            showToast(`画像 "${data.filename}" が挿入されました！`, 'success');
+        } else {
+            console.error('Upload failed:', data.message);
+            showToast(data.message || 'アップロードに失敗しました。', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Upload error details:', error);
+        showToast(`アップロードエラー: ${error.message}`, 'error');
+    });
+}
+
+// カーソル位置にテキストを挿入する関数
+function insertTextAtCursor(textarea, text) {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    
+    textarea.value = before + text + after;
+    
+    // カーソル位置を調整
+    const newPosition = start + text.length;
+    textarea.setSelectionRange(newPosition, newPosition);
+    textarea.focus();
+}
+
 </script>
 </div>
 {% endblock %}
