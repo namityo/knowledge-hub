@@ -126,8 +126,9 @@ export AUDIT_LOG_DIR="/var/log/knowledge"
 ```
 
 ### Database
-- SQLite database auto-created on first run
-- Database schema initialized automatically via `db.create_all()` in app startup
+- SQLite database with automatic migration management
+- Database schema managed via Flask-Migrate for version control
+- Automatic migration execution on application startup
 - Database location configurable via environment variables
 
 #### Database Environment Variables
@@ -172,21 +173,25 @@ export DATABASE_URL="sqlite:///C:/ProgramData/Knowledge/app.db"
 This is a Flask-based knowledge sharing web application with the following structure:
 
 ### Core Components
-- **Flask Application** (`app.py`): Single-file Flask app with all routes and database models
-- **Database Models**: Multiple models for complete knowledge management system:
+- **Flask Application Factory** (`app/__init__.py`): Modular Flask app with application factory pattern
+- **Database Models** (`app/models.py`): Multiple models for complete knowledge management system:
   - `Knowledge`: Core articles with metadata
   - `Comment`: User comments with Markdown support
   - `Like`: Article like system with user restrictions
   - `CommentLike`: Comment like system
-  - `Attachment`: File upload and management
+  - `Attachment`: File upload and management (supports temporary drag-and-drop uploads)
+  - `Tag`: Tag system with usage tracking
+- **Database Management** (`app/database.py`): Automated migration system with Flask-Migrate
+- **Routes** (`app/routes.py`): Web interface routes and file handling
+- **API** (`app/api.py`): REST API endpoints with authentication
 - **Templates**: Jinja2 templates extending `base.html` for consistent layout
 - **Static Assets**: Complete offline-capable local asset hosting (Bootstrap 5, Font Awesome, Highlight.js, Marked.js)
 
 ### Key Routes and Functionality
 - `/` - Homepage with search, filtering, and pagination
-- `/create` - Rich Markdown editor with file upload support (uses `form_editor.html`)
-- `/view/<id>` - Article view with comments, likes, and attachments
-- `/edit/<id>` - Advanced split-pane editor with live preview (uses `form_editor.html`)
+- `/create` - Rich Markdown editor with file upload and drag-and-drop support (uses `form_editor.html`)
+- `/view/<id>` - Article view with comments, likes, attachments, and image display
+- `/edit/<id>` - Advanced split-pane editor with live preview and image management (uses `form_editor.html`)
 - `/delete/<id>` - Delete article (with confirmation)
 - `/comment/<knowledge_id>` - Add comments to articles
 - `/comment/delete/<comment_id>` - Delete user's own comments
@@ -194,6 +199,8 @@ This is a Flask-based knowledge sharing web application with the following struc
 - `/comment/like/<comment_id>` - Toggle comment likes
 - `/download/<attachment_id>` - Download attached files
 - `/delete_attachment/<attachment_id>` - Delete file attachments
+- `/upload_image` - Drag-and-drop image upload endpoint
+- `/image/<attachment_id>` - Serve uploaded images with proper headers
 
 ### Frontend Architecture
 - **Base Template** (`templates/base.html`): Bootstrap 5 layout with Japanese navigation
@@ -267,8 +274,8 @@ class Tag(db.Model):
 ```
 
 ### Technology Stack
-- Flask 2.3.3 with SQLAlchemy ORM
-- SQLite database (location configurable via environment variables)
+- Flask 2.3.3 with SQLAlchemy ORM and Flask-Migrate
+- SQLite database with automatic migration management (location configurable via environment variables)
 - Bootstrap 5.1.3 for responsive UI (locally hosted)
 - Jinja2 templating with custom filters
 - Japanese language interface
@@ -356,6 +363,8 @@ static/
 - **Syntax Help**: Comprehensive Markdown guide with copy-paste examples
 - **Auto-sync**: Editor content synchronized across desktop/mobile views
 - **File Upload**: Multi-file attachment support with client-side validation
+- **Drag-and-Drop Images**: Drag images directly into editor with automatic Markdown insertion
+- **Image Management**: Automatic upload, resizing, and cleanup of orphaned files
 - **Error Handling**: Bootstrap Toast notifications for better UX
 
 ## Updated Routes and Functionality
@@ -382,16 +391,20 @@ static/
 ```
 Flask==2.3.3
 Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.5
 Werkzeug==2.3.7
 Markdown==3.5.1
 Pygments==2.17.2
+pytz==2023.3
+asgiref==3.7.2
+uvicorn==0.29.0
 ```
 
-### Frontend Dependencies (CDN)
-- Bootstrap 5.1.3 (CSS + JS)
-- Font Awesome 6.0.0 (Icons)
-- Highlight.js 11.9.0 (Code syntax highlighting)
-- Marked.js (Client-side Markdown processing for editor preview)
+### Frontend Dependencies (Local Assets)
+- Bootstrap 5.1.3 (CSS + JS) - Locally hosted
+- Font Awesome 6.0.0 (Icons) - Locally hosted with webfonts
+- Highlight.js 11.9.0 (Code syntax highlighting) - Locally hosted
+- Marked.js (Client-side Markdown processing for editor preview) - Locally hosted
 
 ### Markdown Extensions
 - `fenced_code`: GitHub-style code blocks with language specification
@@ -1174,3 +1187,258 @@ python test_with_api_key.py
 - **Webhook Support**: Event notifications for content changes
 - **GraphQL**: Alternative query interface for complex data needs
 - **Real-time Updates**: WebSocket support for live content updates
+
+## Image Drag-and-Drop System (2025-07-21)
+
+### Overview
+Enhanced the editor with image drag-and-drop functionality for seamless image insertion into Markdown content.
+
+### Image Upload Features
+
+#### Drag-and-Drop Interface
+- **Drop Zone**: Full editor area acts as drag-and-drop target
+- **Visual Feedback**: Overlay appears when dragging images over editor
+- **Multi-file Support**: Can drag multiple images simultaneously
+- **File Type Validation**: Only image files (png, jpg, jpeg, gif, svg, webp) accepted
+
+#### Image Processing
+```javascript
+// Automatic Markdown insertion
+![filename.png](/image/123)
+
+// Generated from upload response
+{
+  "success": true,
+  "attachment_id": 123,
+  "image_url": "/image/123",
+  "markdown": "![filename.png](/image/123)",
+  "filename": "filename.png"
+}
+```
+
+#### Backend Implementation
+- **Upload Endpoint**: `/upload_image` for drag-and-drop uploads
+- **Image Serving**: `/image/<attachment_id>` with proper MIME headers
+- **Temporary Storage**: Images stored with `knowledge_id=NULL` until article save
+- **Security**: UUID-based filename storage, MIME type validation
+
+### Image Display System
+
+#### Responsive Image Sizing
+```css
+.markdown-content img {
+    max-width: 100%;
+    max-height: 500px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.markdown-content img:hover {
+    transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+    .markdown-content img {
+        max-height: 300px;
+    }
+}
+```
+
+#### Fullscreen Modal Viewer
+- **Click-to-Zoom**: Click any image to view in fullscreen modal
+- **Responsive Design**: Modal adjusts to screen size
+- **Keyboard Navigation**: ESC key to close modal
+
+### Orphaned File Management
+
+#### Automatic Cleanup System
+```python
+def cleanup_orphaned_attachments():
+    """Cleanup orphaned image files"""
+    # 1. 24-hour-old temporary uploads (knowledge_id=NULL)
+    # 2. 7-day-old dangling files (no database record)
+    # 3. Files from deleted articles
+```
+
+#### Cleanup Triggers
+- **Startup Cleanup**: Automatic cleanup on application start
+- **File Association**: Orphaned images linked to articles on save
+- **Manual Cleanup**: Available via utility functions
+
+### File Storage Structure
+```
+uploads/
+├── ab12cd34ef56.png      # UUID-based filenames
+├── 78gh90ij12kl.jpg      # Prevents filename conflicts
+└── mn34op56qr78.gif      # Secure storage
+```
+
+### User Experience Improvements
+
+#### Toast Notifications
+- **Upload Success**: Green toast with filename confirmation
+- **Upload Errors**: Red toast with descriptive error messages
+- **File Type Errors**: Clear feedback for invalid file types
+- **Size Limit Warnings**: Informative messages for oversized files
+
+#### Visual Feedback
+- **Drag Overlay**: Blue overlay with upload icon during drag
+- **Progress Indication**: Upload progress feedback
+- **Error States**: Clear visual indication of upload failures
+
+### Database Schema Updates
+
+#### Attachment Model Enhancements
+```python
+class Attachment(db.Model):
+    knowledge_id = db.Column(db.Integer, db.ForeignKey('knowledge.id'), nullable=True)  # Allow NULL for temp uploads
+    mime_type = db.Column(db.String(100))  # Enhanced MIME type detection
+    uploaded_by = db.Column(db.String(100))  # User tracking
+```
+
+#### Migration Support
+- **Automatic Migration**: Schema changes applied via Flask-Migrate
+- **Backward Compatibility**: Existing attachments continue to work
+- **Data Integrity**: Proper foreign key constraints with NULL support
+
+### Security Features
+
+#### File Validation
+- **MIME Type Checking**: Server-side MIME type validation
+- **Extension Whitelist**: Only allowed image extensions accepted
+- **Size Limits**: Configurable file size restrictions
+- **User Authorization**: Only authenticated users can upload
+
+#### Path Security
+- **UUID Filenames**: Prevents filename-based attacks
+- **Secure Serving**: Proper Content-Type headers
+- **Access Control**: Images served through controlled endpoints
+
+### Performance Optimizations
+
+#### Efficient Image Serving
+- **Direct File Access**: Images served directly from filesystem
+- **Browser Caching**: Proper cache headers for image assets
+- **Lazy Loading**: Images load on-demand in editor preview
+
+#### Database Optimization
+- **Orphan Cleanup**: Regular cleanup prevents database bloat
+- **Indexed Queries**: Efficient orphan detection queries
+- **Minimal Metadata**: Only essential image information stored
+
+## Database Migration System (2025-07-21)
+
+### Overview
+Implemented comprehensive database migration management using Flask-Migrate for version-controlled schema evolution.
+
+### Automatic Migration Features
+
+#### Startup Migration
+```python
+def auto_migrate_database(app, db):
+    """Automatic migration execution on startup"""
+    # 1. Initialize migration environment if needed
+    # 2. Check existing migration state
+    # 3. Apply pending migrations automatically
+    # 4. Handle migration conflicts and errors
+```
+
+#### Migration File Management
+- **Duplicate Prevention**: Automatic detection and cleanup of duplicate migration files
+- **Conflict Resolution**: Handles multiple migration heads gracefully
+- **Error Recovery**: Fallback to basic table creation if migrations fail
+
+### Migration System Architecture
+
+#### File Structure
+```
+migrations/
+├── alembic.ini          # Alembic configuration
+├── env.py              # Migration environment setup
+├── script.py.mako      # Migration file template
+└── versions/
+    └── *.py            # Individual migration files
+```
+
+#### Component Separation
+- **`app/database.py`**: Migration logic separated from main application
+- **`auto_migrate_database()`**: Core migration execution function
+- **`cleanup_duplicate_migrations()`**: Duplicate file management
+- **`setup_database_migration()`**: Initialization wrapper
+
+### Migration Execution Flow
+
+#### Startup Process
+1. **Environment Check**: Verify Flask-Migrate availability
+2. **Migration Folder**: Initialize if not present
+3. **Duplicate Cleanup**: Remove redundant migration files
+4. **State Detection**: Check current migration status
+5. **Migration Application**: Apply pending migrations
+6. **Error Handling**: Fallback strategies for failures
+
+#### Development Workflow
+```bash
+# Automatic migration on startup
+python app.py              # Auto-migrates on start
+uvicorn asgi:app --reload   # Auto-migrates on start
+
+# Manual migration (if needed)
+flask db migrate -m "Description"
+flask db upgrade
+```
+
+### Migration Safety Features
+
+#### Backup Strategies
+- **Existing Database Detection**: Handles pre-existing databases gracefully
+- **Stamp Operations**: Marks existing databases as current
+- **Non-destructive Updates**: Safe migration application
+
+#### Error Recovery
+```python
+except Exception as migrate_error:
+    print(f"⚠️ Migration error: {migrate_error}")
+    # Fallback to existing database or basic table creation
+    if existing_db_files:
+        print("📊 Using existing database")
+    else:
+        db.create_all()  # Fallback table creation
+```
+
+### Development Benefits
+
+#### Developer Experience
+- **Zero Configuration**: Works out-of-the-box without setup
+- **Automatic Updates**: Schema changes applied seamlessly
+- **Error Tolerance**: Continues operation even with migration issues
+- **Clear Logging**: Informative migration status messages
+
+#### Production Readiness
+- **Version Control**: All schema changes tracked in Git
+- **Rollback Support**: Ability to revert to previous schema versions
+- **Conflict Resolution**: Handles complex migration scenarios
+- **Audit Trail**: Complete history of database changes
+
+### Migration File Management
+
+#### Template System
+- **Mako Templates**: Uses Mako templating for migration file generation
+- **Consistent Format**: Standardized migration file structure
+- **Metadata Tracking**: Revision IDs, timestamps, and dependencies
+
+#### Version Control Integration
+```gitignore
+# Include in Git
+migrations/
+├── alembic.ini         ✅
+├── env.py             ✅
+├── script.py.mako     ✅
+└── versions/*.py      ✅
+
+# Exclude from Git
+instance/              ❌
+*.db                   ❌
+```

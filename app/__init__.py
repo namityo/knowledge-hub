@@ -18,6 +18,7 @@ def create_app():
     from .utils import get_current_user_id, audit_logger
     from .routes import register_routes
     from .api import register_api_routes
+    from .database import setup_database_migration
     
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
     app.config.from_object(Config)
@@ -33,6 +34,9 @@ def create_app():
     
     # データベースの初期化
     db.init_app(app)
+    
+    # データベースマイグレーションのセットアップ
+    migrate = setup_database_migration(app, db)
     
     # ルートの登録
     register_routes(app)
