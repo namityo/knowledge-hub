@@ -62,8 +62,13 @@ def register_routes(app):
         # 一括でエンゲージメント統計を取得（N+1問題回避）
         engagement_stats = get_bulk_engagement_stats(knowledge_list)
         
-        # タグ一覧を取得（使用回数順）
-        all_tags = Tag.query.filter(Tag.usage_count > 0).order_by(Tag.usage_count.desc()).all()
+        # タグ一覧を取得（公開記事で使用されているタグのみ、使用回数順）
+        all_tags = Tag.query.join(
+            Tag.knowledge_items
+        ).filter(
+            Knowledge.is_draft == False,
+            Tag.usage_count > 0
+        ).distinct().order_by(Tag.usage_count.desc()).all()
         
         return render_template('index.html', 
                              knowledge_list=knowledge_list, 
@@ -195,6 +200,7 @@ def register_routes(app):
             handle_file_uploads(knowledge.id, current_user_id, app.config)
             
             db.session.commit()
+            
             flash(message, 'success')
             return redirect(redirect_target)
         
@@ -214,6 +220,9 @@ def register_routes(app):
             audit_logger.warning(f"Unauthorized delete attempt - User:{current_user_id}, Knowledge ID:{id}, Owner:{knowledge.author}")
             abort(403)
         
+        # タグ関連付けをクリア（使用回数も自動更新される）
+        handle_tags(knowledge, '', current_user_id)
+        
         # 関連する添付ファイルを事前に取得してファイルシステムから削除
         attachments = knowledge.attachments
         for attachment in attachments:
@@ -228,6 +237,7 @@ def register_routes(app):
         # 記事を削除（cascade='all, delete-orphan'によりAttachmentレコードも自動削除）
         db.session.delete(knowledge)
         db.session.commit()
+        
         flash('ナレッジが削除されました！', 'success')
         return redirect(url_for('index'))
 

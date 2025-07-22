@@ -133,36 +133,74 @@ def cleanup_orphaned_attachments():
 
 def handle_tags(knowledge, tags_string, author):
     """タグ処理の共通化"""
-    if not tags_string:
-        return
+    from .models import Knowledge
+    from sqlalchemy import func
+    
+    # 変更前のタグを記録（使用回数更新のため）
+    old_tags = set(knowledge.tags)
     
     # 既存のタグ関連付けをクリア
     knowledge.tags.clear()
     
-    # タグ文字列をパース（カンマ区切り）
-    tag_names = [name.strip() for name in tags_string.split(',') if name.strip()]
+    new_tags = set()
+    if tags_string:
+        # タグ文字列をパース（カンマ区切り）
+        tag_names = [name.strip() for name in tags_string.split(',') if name.strip()]
+        
+        for tag_name in tag_names:
+            # タグ名の長さ制限
+            if len(tag_name) > 50:
+                flash(f'タグ "{tag_name}" が長すぎます（最大50文字）。', 'warning')
+                continue
+            
+            # 既存のタグを検索または新規作成
+            tag = Tag.query.filter_by(name=tag_name).first()
+            if not tag:
+                tag = Tag(name=tag_name, created_by=author)
+                db.session.add(tag)
+                db.session.flush()  # IDを取得するため
+            
+            # ナレッジにタグを関連付け
+            if tag not in knowledge.tags:
+                knowledge.tags.append(tag)
+                new_tags.add(tag)
     
-    for tag_name in tag_names:
-        # タグ名の長さ制限
-        if len(tag_name) > 50:
-            flash(f'タグ "{tag_name}" が長すぎます（最大50文字）。', 'warning')
-            continue
+    # 変更されたタグの使用回数を更新
+    all_affected_tags = old_tags | new_tags
+    for tag in all_affected_tags:
+        # このタグを使用している公開記事の数を計算
+        count = db.session.query(func.count(Knowledge.id)).join(
+            Knowledge.tags
+        ).filter(
+            Tag.id == tag.id,
+            Knowledge.is_draft == False
+        ).scalar()
         
-        # 既存のタグを検索または新規作成
-        tag = Tag.query.filter_by(name=tag_name).first()
-        if not tag:
-            tag = Tag(name=tag_name, created_by=author)
-            db.session.add(tag)
-        
-        # 使用回数を増加
-        if tag.usage_count is None:
-            tag.usage_count = 1
-        else:
-            tag.usage_count += 1
-        
-        # ナレッジにタグを関連付け
-        if tag not in knowledge.tags:
-            knowledge.tags.append(tag)
+        tag.usage_count = count or 0
+
+def recalculate_tag_usage_counts():
+    """全タグの使用回数を再計算"""
+    from .models import Tag, Knowledge, db
+    from sqlalchemy import func
+    
+    # 公開記事のみでタグ使用回数を計算
+    tag_counts = db.session.query(
+        Tag.id,
+        func.count(Knowledge.id).label('usage_count')
+    ).outerjoin(
+        Tag.knowledge_items
+    ).filter(
+        Knowledge.is_draft == False
+    ).group_by(Tag.id).all()
+    
+    # 各タグの使用回数を更新
+    for tag_id, count in tag_counts:
+        tag = Tag.query.get(tag_id)
+        if tag:
+            tag.usage_count = count
+    
+    db.session.commit()
+    audit_logger.info(f"Recalculated usage counts for {len(tag_counts)} tags")
 
 def get_bulk_view_counts(knowledge_list, days=None):
     """複数の記事の閲覧数を一括取得（N+1問題を回避）
