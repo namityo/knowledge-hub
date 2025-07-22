@@ -27,16 +27,20 @@
                             <!-- ランキングバッジ -->
                             <div>
                                 {% if loop.index == 1 %}
-                                    <span class="badge bg-warning text-dark fs-6">
-                                        <i class="fas fa-trophy"></i> 1位
+                                    <span class="badge bg-warning text-dark fs-6 rounded-pill">
+                                        <i class="fas fa-trophy"></i> {{ loop.index }}位
                                     </span>
                                 {% elif loop.index == 2 %}
-                                    <span class="badge bg-secondary text-white fs-6">
-                                        <i class="fas fa-medal"></i> 2位
+                                    <span class="badge bg-secondary text-white fs-6 rounded-pill">
+                                        <i class="fas fa-medal"></i> {{ loop.index }}位
                                     </span>
                                 {% elif loop.index == 3 %}
-                                    <span class="badge bg-success text-white fs-6">
-                                        <i class="fas fa-award"></i> 3位
+                                    <span class="badge bg-success text-white fs-6 rounded-pill">
+                                        <i class="fas fa-award"></i> {{ loop.index }}位
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info text-white fs-6 rounded-pill">
+                                        <i class="fas fa-star"></i> {{ loop.index }}位
                                     </span>
                                 {% endif %}
                             </div>
@@ -49,7 +53,7 @@
                         </div>
                         
                         <!-- 二行目：タイトル -->
-                        <h5 class="card-title mb-2">{{ knowledge.title }}</h5>
+                        <h5 class="card-title my-3">{{ knowledge.title }}</h5>
                         
                         <!-- タグ表示 -->
                         {% if knowledge.tags %}
@@ -95,16 +99,20 @@
                             <!-- ランキングバッジ -->
                             <div>
                                 {% if loop.index == 1 %}
-                                    <span class="badge bg-warning text-dark fs-6">
-                                        <i class="fas fa-trophy"></i> 1位
+                                    <span class="badge bg-warning text-dark fs-6 rounded-pill">
+                                        <i class="fas fa-trophy"></i> {{ loop.index }}位
                                     </span>
                                 {% elif loop.index == 2 %}
-                                    <span class="badge bg-secondary text-white fs-6">
-                                        <i class="fas fa-medal"></i> 2位
+                                    <span class="badge bg-secondary text-white fs-6 rounded-pill">
+                                        <i class="fas fa-medal"></i> {{ loop.index }}位
                                     </span>
                                 {% elif loop.index == 3 %}
-                                    <span class="badge bg-success text-white fs-6">
-                                        <i class="fas fa-award"></i> 3位
+                                    <span class="badge bg-success text-white fs-6 rounded-pill">
+                                        <i class="fas fa-award"></i> {{ loop.index }}位
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info text-white fs-6 rounded-pill">
+                                        <i class="fas fa-star"></i> {{ loop.index }}位
                                     </span>
                                 {% endif %}
                             </div>
@@ -117,7 +125,7 @@
                         </div>
                         
                         <!-- 二行目：タイトル -->
-                        <h5 class="card-title mb-2">{{ knowledge.title }}</h5>
+                        <h5 class="card-title my-3">{{ knowledge.title }}</h5>
                         
                         <!-- タグ表示 -->
                         {% if knowledge.tags %}
@@ -163,16 +171,20 @@
                             <!-- ランキングバッジ -->
                             <div>
                                 {% if loop.index == 1 %}
-                                    <span class="badge bg-warning text-dark fs-6">
-                                        <i class="fas fa-trophy"></i> 1位
+                                    <span class="badge bg-warning text-dark fs-6 rounded-pill">
+                                        <i class="fas fa-trophy"></i> {{ loop.index }}位
                                     </span>
                                 {% elif loop.index == 2 %}
-                                    <span class="badge bg-secondary text-white fs-6">
-                                        <i class="fas fa-medal"></i> 2位
+                                    <span class="badge bg-secondary text-white fs-6 rounded-pill">
+                                        <i class="fas fa-medal"></i> {{ loop.index }}位
                                     </span>
                                 {% elif loop.index == 3 %}
-                                    <span class="badge bg-success text-white fs-6">
-                                        <i class="fas fa-award"></i> 3位
+                                    <span class="badge bg-success text-white fs-6 rounded-pill">
+                                        <i class="fas fa-award"></i> {{ loop.index }}位
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info text-white fs-6 rounded-pill">
+                                        <i class="fas fa-star"></i> {{ loop.index }}位
                                     </span>
                                 {% endif %}
                             </div>
@@ -185,7 +197,7 @@
                         </div>
                         
                         <!-- 二行目：タイトル -->
-                        <h5 class="card-title mb-2">{{ knowledge.title }}</h5>
+                        <h5 class="card-title my-3">{{ knowledge.title }}</h5>
                         
                         <!-- タグ表示 -->
                         {% if knowledge.tags %}

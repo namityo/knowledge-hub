@@ -510,6 +510,21 @@ export ALLOWED_FILE_EXTENSIONS="pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,png,jpg,j
 export ALLOWED_FILE_EXTENSIONS="txt,pdf,png,jpg"
 ```
 
+#### Popular Articles Configuration
+```bash
+# Set number of popular articles to display in each ranking (default: 3)
+export POPULAR_ARTICLES_COUNT="5"                      # Show top 5 articles in each category
+export POPULAR_ARTICLES_COUNT="10"                     # Show top 10 articles in each category
+
+# Examples for different environments:
+# Default: Top 3 articles (compact layout)
+# No POPULAR_ARTICLES_COUNT set - uses default value of 3
+
+# Extended view: Top 5 or more articles
+export POPULAR_ARTICLES_COUNT="5"                      # Balanced view
+export POPULAR_ARTICLES_COUNT="10"                     # Comprehensive view
+```
+
 #### Default Allowed Extensions
 When `ALLOWED_FILE_EXTENSIONS` is not set, the following extensions are allowed:
 - **Documents**: txt, pdf, doc, docx, xls, xlsx, ppt, pptx, csv, json, xml, md

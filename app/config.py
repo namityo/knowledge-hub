@@ -43,6 +43,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-fallback-key-change-in-production
 API_KEY = os.environ.get('API_KEY')
 API_KEY_HEADER_NAME = os.environ.get('API_KEY_HEADER_NAME', 'X-API-Key')
 
+# 人気記事表示件数設定
+POPULAR_ARTICLES_COUNT = int(os.environ.get('POPULAR_ARTICLES_COUNT', '5'))
+
 # タイムゾーン設定
 import pytz
 JST = pytz.timezone('Asia/Tokyo')

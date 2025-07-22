@@ -5,7 +5,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timezone
 from .models import db, Knowledge, Comment, Like, CommentLike, Attachment, Tag, ViewHistory
 from .utils import get_current_user_id, handle_file_uploads, handle_tags, audit_logger, get_bulk_engagement_stats
-from .config import SYSTEM_TITLE, MAX_FILE_SIZE_MB, allowed_file
+from .config import SYSTEM_TITLE, MAX_FILE_SIZE_MB, POPULAR_ARTICLES_COUNT, allowed_file
 
 def register_routes(app):
     """ルートをFlaskアプリに登録"""
@@ -420,10 +420,10 @@ def register_routes(app):
                 'recent_comments': stats['comments']
             })
         
-        # 各カテゴリでソートしてトップ3を取得
-        top_by_views_with_counts = sorted(articles_with_stats, key=lambda x: x['recent_views'], reverse=True)[:3]
-        top_by_likes_with_counts = sorted(articles_with_stats, key=lambda x: x['recent_likes'], reverse=True)[:3]
-        top_by_comments_with_counts = sorted(articles_with_stats, key=lambda x: x['recent_comments'], reverse=True)[:3]
+        # 各カテゴリでソートしてトップN件を取得
+        top_by_views_with_counts = sorted(articles_with_stats, key=lambda x: x['recent_views'], reverse=True)[:POPULAR_ARTICLES_COUNT]
+        top_by_likes_with_counts = sorted(articles_with_stats, key=lambda x: x['recent_likes'], reverse=True)[:POPULAR_ARTICLES_COUNT]
+        top_by_comments_with_counts = sorted(articles_with_stats, key=lambda x: x['recent_comments'], reverse=True)[:POPULAR_ARTICLES_COUNT]
         
         return render_template('popular.html',
                              top_by_views=top_by_views_with_counts,
