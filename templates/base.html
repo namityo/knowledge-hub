@@ -16,21 +16,38 @@
                 <i class="fas fa-home"></i>
             </a>
             
-            <!-- 検索フォーム -->
-            <form method="GET" action="{{ url_for('index') }}" class="d-flex flex-grow-1 mx-1">
-                <input type="text" name="search" class="form-control form-control-sm me-1" placeholder="検索..." value="{{ request.args.get('search', '') }}" style="max-width: 250px; min-width: 80px;">
-                {% if request.args.get('my_posts') %}
-                <input type="hidden" name="my_posts" value="{{ request.args.get('my_posts') }}">
-                {% endif %}
-                <button type="submit" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-search"></i>
-                </button>
-                {% if request.args.get('search') or request.args.get('my_posts') %}
-                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm ms-1">
-                    <i class="fas fa-times"></i>
+            <!-- 検索フォーム（小画面では非表示） -->
+            <div class="d-none d-sm-flex flex-grow-1 mx-1">
+                <form method="GET" action="{{ url_for('index') }}" class="d-flex">
+                    <input type="text" name="search" class="form-control form-control-sm me-1" placeholder="検索..." value="{{ request.args.get('search', '') }}" style="max-width: 250px; min-width: 80px;">
+                    {% if request.args.get('my_posts') %}
+                    <input type="hidden" name="my_posts" value="{{ request.args.get('my_posts') }}">
+                    {% endif %}
+                    <button type="submit" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    {% if request.args.get('search') or request.args.get('my_posts') %}
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm ms-1">
+                        <i class="fas fa-times"></i>
+                    </a>
+                    {% endif %}
+                </form>
+                
+                <!-- 人気記事リンク（検索の真横・sm画面以上） -->
+                <a class="btn btn-outline-light btn-sm d-none d-lg-block ms-2" href="{{ url_for('popular') }}">
+                    <i class="fas fa-fire me-1"></i>人気記事
                 </a>
-                {% endif %}
-            </form>
+                <a class="btn btn-outline-light btn-sm d-lg-none ms-2" href="{{ url_for('popular') }}">
+                    <i class="fas fa-fire"></i>
+                </a>
+            </div>
+            
+            <!-- 人気記事リンク（小画面専用） -->
+            <div class="d-sm-none flex-grow-1 mx-1 d-flex justify-content-center">
+                <a class="btn btn-outline-light btn-sm" href="{{ url_for('popular') }}">
+                    <i class="fas fa-fire"></i>
+                </a>
+            </div>
             
             <div class="navbar-nav d-flex flex-row align-items-center" style="flex-shrink: 0;">
                 <a class="btn btn-warning btn-sm d-none d-lg-block me-1" href="{{ url_for('create') }}">
@@ -57,12 +74,6 @@
                     </span>
                     {% endif %}
                 </a>
-                <a class="btn btn-outline-light btn-sm d-none d-lg-block me-1" href="{{ url_for('popular') }}">
-                    <i class="fas fa-fire me-1"></i>人気記事
-                </a>
-                <a class="btn btn-outline-light btn-sm d-lg-none me-1" href="{{ url_for('popular') }}">
-                    <i class="fas fa-fire"></i>
-                </a>
                 <span class="text-light small d-none d-xl-block ms-2">
                     <i class="fas fa-user me-1"></i>{{ current_user_id }}
                 </span>
@@ -85,7 +96,7 @@
         {% block content %}{% endblock %}
     </div>
 
-    <footer class="bg-dark text-light py-2 mt-auto">
+    <footer class="bg-dark text-light py-2">
         <div class="container">
             <div class="row">
                 <div class="col-12 text-center">

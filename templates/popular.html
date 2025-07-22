@@ -4,60 +4,69 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-12">
-        <h2 class="mb-4"><i class="fas fa-fire text-danger"></i> 人気記事 (直近一ヶ月)</h2>
-        
-        <!-- 閲覧数トップ3 -->
-        <div class="mb-5">
-            <h4 class="mb-3"><i class="fas fa-eye text-primary"></i> 閲覧数ランキング（直近一ヶ月）</h4>
+    <div class="col-12">
+        <h2 class="mb-4 text-center"><i class="fas fa-fire text-danger"></i> 最近の人気記事 </h2>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 閲覧数トップ3 -->
+    <div class="col-lg-4 col-md-12 mb-4">
+        <div>
+            <h4 class="mb-3 text-center"><i class="fas fa-eye text-primary"></i> 閲覧数ランキング</h4>
             {% if top_by_views %}
                 {% for item in top_by_views %}
                 {% set knowledge = item.knowledge %}
-                <div class="card mb-3" style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" 
+                <div class="card mb-2" style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" 
                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" 
                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.12)'"
                      onclick="window.location.href='{{ url_for('view', id=knowledge.id) }}'">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <h5 class="card-title">
-                                    {% if loop.index == 1 %}
-                                        <i class="fas fa-trophy text-warning"></i>
-                                    {% elif loop.index == 2 %}
-                                        <i class="fas fa-medal text-secondary"></i>
-                                    {% elif loop.index == 3 %}
-                                        <i class="fas fa-award text-warning"></i>
-                                    {% endif %}
-                                    {{ knowledge.title }}
-                                </h5>
-                                
-                                <!-- タグ表示 -->
-                                {% if knowledge.tags %}
-                                <div class="mb-2">
-                                    {% for tag in knowledge.tags %}
-                                    <span class="badge bg-primary me-1">
-                                        <i class="fas fa-tag"></i> {{ tag.name }}
+                        <!-- 一行目：ランキングと統計情報 -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <!-- ランキングバッジ -->
+                            <div>
+                                {% if loop.index == 1 %}
+                                    <span class="badge bg-warning text-dark fs-6">
+                                        <i class="fas fa-trophy"></i> 1位
                                     </span>
-                                    {% endfor %}
-                                </div>
+                                {% elif loop.index == 2 %}
+                                    <span class="badge bg-secondary text-white fs-6">
+                                        <i class="fas fa-medal"></i> 2位
+                                    </span>
+                                {% elif loop.index == 3 %}
+                                    <span class="badge bg-success text-white fs-6">
+                                        <i class="fas fa-award"></i> 3位
+                                    </span>
                                 {% endif %}
-                                
-                                <small class="text-muted d-flex gap-3 flex-wrap">
-                                    <span>作成者: {{ knowledge.author }}</span>
-                                    <span>作成日: {{ knowledge.created_at|jst }}</span>
-                                </small>
-                                <div class="card-text mt-2">{{ knowledge.content|preview }}</div>
                             </div>
-                            <div class="text-end ms-3">
-                                <div class="badge bg-primary fs-6 mb-2">
-                                    <i class="fas fa-eye"></i> {{ item.recent_views }}
-                                </div>
-                                <div class="small text-muted">
-                                    <div><i class="fas fa-heart text-danger"></i> {{ item.recent_likes }}</div>
-                                    <div><i class="fas fa-comments"></i> {{ item.recent_comments }}</div>
-                                </div>
+                            <!-- 統計情報 -->
+                            <div class="d-flex gap-3 text-nowrap small text-muted">
+                                <span><i class="fas fa-eye"></i> {{ item.recent_views }}</span>
+                                <span><i class="fas fa-heart text-danger"></i> {{ item.recent_likes }}</span>
+                                <span><i class="fas fa-comments"></i> {{ item.recent_comments }}</span>
                             </div>
                         </div>
+                        
+                        <!-- 二行目：タイトル -->
+                        <h5 class="card-title mb-2">{{ knowledge.title }}</h5>
+                        
+                        <!-- タグ表示 -->
+                        {% if knowledge.tags %}
+                        <div class="mb-2">
+                            {% for tag in knowledge.tags %}
+                            <span class="badge bg-primary me-1">
+                                <i class="fas fa-tag"></i> {{ tag.name }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- 作成者・作成日 -->
+                        <small class="text-muted d-flex gap-3 flex-wrap">
+                            <span>作成者: {{ knowledge.author }}</span>
+                            <span>作成日: {{ knowledge.created_at|jst }}</span>
+                        </small>
                     </div>
                 </div>
                 {% endfor %}
@@ -67,58 +76,65 @@
                 </div>
             {% endif %}
         </div>
-        
-        <!-- いいね数トップ3 -->
-        <div class="mb-5">
-            <h4 class="mb-3"><i class="fas fa-heart text-danger"></i> いいね数ランキング（直近一ヶ月）</h4>
+    </div>
+    
+    <!-- いいね数トップ3 -->
+    <div class="col-lg-4 col-md-12 mb-4">
+        <div>
+            <h4 class="mb-3 text-center"><i class="fas fa-heart text-danger"></i> いいね数ランキング</h4>
             {% if top_by_likes %}
                 {% for item in top_by_likes %}
                 {% set knowledge = item.knowledge %}
-                <div class="card mb-3" style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" 
+                <div class="card mb-2" style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" 
                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" 
                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.12)'"
                      onclick="window.location.href='{{ url_for('view', id=knowledge.id) }}'">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <h5 class="card-title">
-                                    {% if loop.index == 1 %}
-                                        <i class="fas fa-trophy text-warning"></i>
-                                    {% elif loop.index == 2 %}
-                                        <i class="fas fa-medal text-secondary"></i>
-                                    {% elif loop.index == 3 %}
-                                        <i class="fas fa-award text-warning"></i>
-                                    {% endif %}
-                                    {{ knowledge.title }}
-                                </h5>
-                                
-                                <!-- タグ表示 -->
-                                {% if knowledge.tags %}
-                                <div class="mb-2">
-                                    {% for tag in knowledge.tags %}
-                                    <span class="badge bg-primary me-1">
-                                        <i class="fas fa-tag"></i> {{ tag.name }}
+                        <!-- 一行目：ランキングと統計情報 -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <!-- ランキングバッジ -->
+                            <div>
+                                {% if loop.index == 1 %}
+                                    <span class="badge bg-warning text-dark fs-6">
+                                        <i class="fas fa-trophy"></i> 1位
                                     </span>
-                                    {% endfor %}
-                                </div>
+                                {% elif loop.index == 2 %}
+                                    <span class="badge bg-secondary text-white fs-6">
+                                        <i class="fas fa-medal"></i> 2位
+                                    </span>
+                                {% elif loop.index == 3 %}
+                                    <span class="badge bg-success text-white fs-6">
+                                        <i class="fas fa-award"></i> 3位
+                                    </span>
                                 {% endif %}
-                                
-                                <small class="text-muted d-flex gap-3 flex-wrap">
-                                    <span>作成者: {{ knowledge.author }}</span>
-                                    <span>作成日: {{ knowledge.created_at|jst }}</span>
-                                </small>
-                                <div class="card-text mt-2">{{ knowledge.content|preview }}</div>
                             </div>
-                            <div class="text-end ms-3">
-                                <div class="badge bg-danger fs-6 mb-2">
-                                    <i class="fas fa-heart"></i> {{ item.recent_likes }}
-                                </div>
-                                <div class="small text-muted">
-                                    <div><i class="fas fa-eye"></i> {{ item.recent_views }}</div>
-                                    <div><i class="fas fa-comments"></i> {{ item.recent_comments }}</div>
-                                </div>
+                            <!-- 統計情報 -->
+                            <div class="d-flex gap-3 text-nowrap small text-muted">
+                                <span><i class="fas fa-eye"></i> {{ item.recent_views }}</span>
+                                <span><i class="fas fa-heart text-danger"></i> {{ item.recent_likes }}</span>
+                                <span><i class="fas fa-comments"></i> {{ item.recent_comments }}</span>
                             </div>
                         </div>
+                        
+                        <!-- 二行目：タイトル -->
+                        <h5 class="card-title mb-2">{{ knowledge.title }}</h5>
+                        
+                        <!-- タグ表示 -->
+                        {% if knowledge.tags %}
+                        <div class="mb-2">
+                            {% for tag in knowledge.tags %}
+                            <span class="badge bg-primary me-1">
+                                <i class="fas fa-tag"></i> {{ tag.name }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- 作成者・作成日 -->
+                        <small class="text-muted d-flex gap-3 flex-wrap">
+                            <span>作成者: {{ knowledge.author }}</span>
+                            <span>作成日: {{ knowledge.created_at|jst }}</span>
+                        </small>
                     </div>
                 </div>
                 {% endfor %}
@@ -128,58 +144,65 @@
                 </div>
             {% endif %}
         </div>
-        
-        <!-- コメント数トップ3 -->
-        <div class="mb-5">
-            <h4 class="mb-3"><i class="fas fa-comments text-success"></i> コメント数ランキング（直近一ヶ月）</h4>
+    </div>
+    
+    <!-- コメント数トップ3 -->
+    <div class="col-lg-4 col-md-12 mb-4">
+        <div>
+            <h4 class="mb-3 text-center"><i class="fas fa-comments text-success"></i> コメント数ランキング</h4>
             {% if top_by_comments %}
                 {% for item in top_by_comments %}
                 {% set knowledge = item.knowledge %}
-                <div class="card mb-3" style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" 
+                <div class="card mb-2" style="cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" 
                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" 
                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.12)'"
                      onclick="window.location.href='{{ url_for('view', id=knowledge.id) }}'">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <h5 class="card-title">
-                                    {% if loop.index == 1 %}
-                                        <i class="fas fa-trophy text-warning"></i>
-                                    {% elif loop.index == 2 %}
-                                        <i class="fas fa-medal text-secondary"></i>
-                                    {% elif loop.index == 3 %}
-                                        <i class="fas fa-award text-warning"></i>
-                                    {% endif %}
-                                    {{ knowledge.title }}
-                                </h5>
-                                
-                                <!-- タグ表示 -->
-                                {% if knowledge.tags %}
-                                <div class="mb-2">
-                                    {% for tag in knowledge.tags %}
-                                    <span class="badge bg-primary me-1">
-                                        <i class="fas fa-tag"></i> {{ tag.name }}
+                        <!-- 一行目：ランキングと統計情報 -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <!-- ランキングバッジ -->
+                            <div>
+                                {% if loop.index == 1 %}
+                                    <span class="badge bg-warning text-dark fs-6">
+                                        <i class="fas fa-trophy"></i> 1位
                                     </span>
-                                    {% endfor %}
-                                </div>
+                                {% elif loop.index == 2 %}
+                                    <span class="badge bg-secondary text-white fs-6">
+                                        <i class="fas fa-medal"></i> 2位
+                                    </span>
+                                {% elif loop.index == 3 %}
+                                    <span class="badge bg-success text-white fs-6">
+                                        <i class="fas fa-award"></i> 3位
+                                    </span>
                                 {% endif %}
-                                
-                                <small class="text-muted d-flex gap-3 flex-wrap">
-                                    <span>作成者: {{ knowledge.author }}</span>
-                                    <span>作成日: {{ knowledge.created_at|jst }}</span>
-                                </small>
-                                <div class="card-text mt-2">{{ knowledge.content|preview }}</div>
                             </div>
-                            <div class="text-end ms-3">
-                                <div class="badge bg-success fs-6 mb-2">
-                                    <i class="fas fa-comments"></i> {{ item.recent_comments }}
-                                </div>
-                                <div class="small text-muted">
-                                    <div><i class="fas fa-eye"></i> {{ item.recent_views }}</div>
-                                    <div><i class="fas fa-heart text-danger"></i> {{ item.recent_likes }}</div>
-                                </div>
+                            <!-- 統計情報 -->
+                            <div class="d-flex gap-3 text-nowrap small text-muted">
+                                <span><i class="fas fa-eye"></i> {{ item.recent_views }}</span>
+                                <span><i class="fas fa-heart text-danger"></i> {{ item.recent_likes }}</span>
+                                <span><i class="fas fa-comments"></i> {{ item.recent_comments }}</span>
                             </div>
                         </div>
+                        
+                        <!-- 二行目：タイトル -->
+                        <h5 class="card-title mb-2">{{ knowledge.title }}</h5>
+                        
+                        <!-- タグ表示 -->
+                        {% if knowledge.tags %}
+                        <div class="mb-2">
+                            {% for tag in knowledge.tags %}
+                            <span class="badge bg-primary me-1">
+                                <i class="fas fa-tag"></i> {{ tag.name }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- 作成者・作成日 -->
+                        <small class="text-muted d-flex gap-3 flex-wrap">
+                            <span>作成者: {{ knowledge.author }}</span>
+                            <span>作成日: {{ knowledge.created_at|jst }}</span>
+                        </small>
                     </div>
                 </div>
                 {% endfor %}
@@ -189,8 +212,12 @@
                 </div>
             {% endif %}
         </div>
-        
-        <!-- 戻るボタン -->
+    </div>
+</div>
+
+<!-- 戻るボタン -->
+<div class="row">
+    <div class="col-12">
         <div class="text-center mt-4">
             <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
                 <i class="fas fa-arrow-left"></i> ホームに戻る
