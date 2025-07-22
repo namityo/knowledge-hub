@@ -50,6 +50,9 @@ POPULAR_ARTICLES_COUNT = int(os.environ.get('POPULAR_ARTICLES_COUNT', '5'))
 import pytz
 JST = pytz.timezone('Asia/Tokyo')
 
+# カスタムアップロードディレクトリ（相対または絶対パス）
+UPLOAD_DIR = os.environ.get('UPLOAD_DIR')
+
 # ログ関連の環境変数を定数として取得
 AUDIT_LOG_DIR = os.environ.get('AUDIT_LOG_DIR')
 AUDIT_LOG_FILENAME = os.environ.get('AUDIT_LOG_FILENAME', 'audit.log')
@@ -74,6 +77,27 @@ def get_database_path():
         instance_dir = os.path.join(app_root, 'instance')
         os.makedirs(instance_dir, exist_ok=True)
         return os.path.join(instance_dir, DATABASE_FILENAME)
+
+def get_upload_path():
+    """アップロードディレクトリのパスを構築"""
+    if UPLOAD_DIR:
+        # 絶対パスまたは相対パスを指定
+        if not os.path.isabs(UPLOAD_DIR):
+            # 相対パスの場合は、アプリケーションルートからの相対パス
+            app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            upload_dir = os.path.join(app_root, UPLOAD_DIR)
+        else:
+            upload_dir = UPLOAD_DIR
+        
+        # ディレクトリが存在しない場合は作成
+        os.makedirs(upload_dir, exist_ok=True)
+        return upload_dir
+    else:
+        # デフォルト: アプリケーションルート/uploads
+        app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        upload_dir = os.path.join(app_root, 'uploads')
+        os.makedirs(upload_dir, exist_ok=True)
+        return upload_dir
 
 def get_audit_log_path():
     """監査ログファイルのパスを構築"""
@@ -142,11 +166,17 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     
     # ファイルアップロード設定
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+    @staticmethod
+    def get_upload_folder():
+        """アップロードフォルダパスを取得"""
+        return get_upload_path()
+    
     MAX_CONTENT_LENGTH = MAX_FILE_SIZE_MB * 1024 * 1024
     
     @staticmethod
     def init_app(app):
         """アプリケーション初期化時の設定"""
-        # アップロードフォルダが存在しない場合は作成
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        # アップロードフォルダパスを動的に設定
+        app.config['UPLOAD_FOLDER'] = Config.get_upload_folder()
+        # アップロードフォルダが存在しない場合は作成（get_upload_path()で既に作成済み）
+        pass
