@@ -53,7 +53,26 @@ def require_api_key(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def serialize_knowledge(knowledge):
+def serialize_comment(comment):
+    """Comment オブジェクトをJSON形式にシリアライズ"""
+    # 日本時間に変換
+    created_at_jst = None
+    if comment.created_at:
+        if comment.created_at.tzinfo is None:
+            created_at_utc = comment.created_at.replace(tzinfo=timezone.utc)
+        else:
+            created_at_utc = comment.created_at
+        created_at_jst = created_at_utc.astimezone(JST).strftime('%Y-%m-%d %H:%M:%S')
+    
+    return {
+        'id': comment.id,
+        'content': comment.content,
+        'author': comment.author,
+        'created_at': created_at_jst,
+        'like_count': len(comment.comment_likes)
+    }
+
+def serialize_knowledge(knowledge, include_comments=False):
     """Knowledge オブジェクトをJSON形式にシリアライズ"""
     # 日本時間に変換
     created_at_jst = None
@@ -73,7 +92,7 @@ def serialize_knowledge(knowledge):
             updated_at_utc = knowledge.updated_at
         updated_at_jst = updated_at_utc.astimezone(JST).strftime('%Y-%m-%d %H:%M:%S')
     
-    return {
+    result = {
         'id': knowledge.id,
         'title': knowledge.title,
         'content': knowledge.content,
@@ -86,6 +105,14 @@ def serialize_knowledge(knowledge):
         'tags': [{'id': tag.id, 'name': tag.name, 'color': tag.color} for tag in knowledge.tags],
         'is_draft': knowledge.is_draft
     }
+    
+    # コメント詳細を含める場合
+    if include_comments:
+        # コメントを作成日時の新しい順でソート
+        comments = sorted(knowledge.comments, key=lambda x: x.created_at, reverse=True)
+        result['comments'] = [serialize_comment(comment) for comment in comments]
+    
+    return result
 
 @api_bp.route('/articles/latest', methods=['GET'])
 @require_api_key
@@ -182,8 +209,11 @@ def get_latest_articles():
 @api_bp.route('/articles/<int:article_id>', methods=['GET'])
 @require_api_key
 def get_article(article_id):
-    """特定記事の詳細を取得"""
+    """特定記事の詳細を取得（コメント含む）"""
     try:
+        # include_comments パラメータをチェック（デフォルトは true）
+        include_comments = request.args.get('include_comments', 'true').lower() in ['true', '1', 'yes']
+        
         article = Knowledge.query.filter(
             Knowledge.id == article_id,
             Knowledge.is_draft == False
@@ -197,7 +227,7 @@ def get_article(article_id):
         
         return json_response({
             'status': 'success',
-            'data': serialize_knowledge(article)
+            'data': serialize_knowledge(article, include_comments=include_comments)
         }, 200)
         
     except Exception as e:
