@@ -163,3 +163,120 @@ def handle_tags(knowledge, tags_string, author):
         # ナレッジにタグを関連付け
         if tag not in knowledge.tags:
             knowledge.tags.append(tag)
+
+def get_bulk_view_counts(knowledge_list, days=None):
+    """複数の記事の閲覧数を一括取得（N+1問題を回避）
+    
+    Note: 単一記事の場合は knowledge.get_view_count() を使用
+    """
+    from .models import ViewHistory, db
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import func
+    
+    if not knowledge_list:
+        return {}
+    
+    knowledge_ids = [k.id for k in knowledge_list]
+    
+    # 基本クエリ
+    query = db.session.query(
+        ViewHistory.knowledge_id,
+        func.count(ViewHistory.id).label('view_count')
+    ).filter(ViewHistory.knowledge_id.in_(knowledge_ids))
+    
+    # 期間指定がある場合
+    if days:
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.filter(ViewHistory.viewed_at >= cutoff_date)
+    
+    # 結果を辞書に変換
+    results = query.group_by(ViewHistory.knowledge_id).all()
+    return {result.knowledge_id: result.view_count for result in results}
+
+def get_bulk_like_counts(knowledge_list, days=None):
+    """複数の記事のいいね数を一括取得（N+1問題を回避）
+    
+    Note: 単一記事の場合は knowledge.get_like_count() を使用
+    """
+    from .models import Like, db
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import func
+    
+    if not knowledge_list:
+        return {}
+    
+    knowledge_ids = [k.id for k in knowledge_list]
+    
+    # 基本クエリ
+    query = db.session.query(
+        Like.knowledge_id,
+        func.count(Like.id).label('like_count')
+    ).filter(Like.knowledge_id.in_(knowledge_ids))
+    
+    # 期間指定がある場合
+    if days:
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.filter(Like.created_at >= cutoff_date)
+    
+    # 結果を辞書に変換
+    results = query.group_by(Like.knowledge_id).all()
+    return {result.knowledge_id: result.like_count for result in results}
+
+def get_bulk_comment_counts(knowledge_list, days=None):
+    """複数の記事のコメント数を一括取得（N+1問題を回避）
+    
+    Note: 単一記事の場合は knowledge.get_comment_count() を使用
+    """
+    from .models import Comment, db
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import func
+    
+    if not knowledge_list:
+        return {}
+    
+    knowledge_ids = [k.id for k in knowledge_list]
+    
+    # 基本クエリ
+    query = db.session.query(
+        Comment.knowledge_id,
+        func.count(Comment.id).label('comment_count')
+    ).filter(Comment.knowledge_id.in_(knowledge_ids))
+    
+    # 期間指定がある場合
+    if days:
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        query = query.filter(Comment.created_at >= cutoff_date)
+    
+    # 結果を辞書に変換
+    results = query.group_by(Comment.knowledge_id).all()
+    return {result.knowledge_id: result.comment_count for result in results}
+
+def get_bulk_engagement_stats(knowledge_list, days=None):
+    """複数の記事のエンゲージメント統計を一括取得（閲覧・いいね・コメント）
+    
+    Args:
+        knowledge_list: Knowledge オブジェクトのリスト
+        days: 期間指定（None=全期間、30=直近30日など）
+    
+    Returns:
+        dict: {knowledge.id: {'views': count, 'likes': count, 'comments': count}}
+    
+    Note: 個別記事の場合は以下の統一APIを使用:
+        - knowledge.get_view_count()     # 総閲覧数
+        - knowledge.get_like_count()     # 総いいね数
+        - knowledge.get_comment_count()  # 総コメント数
+    """
+    view_counts = get_bulk_view_counts(knowledge_list, days)
+    like_counts = get_bulk_like_counts(knowledge_list, days)
+    comment_counts = get_bulk_comment_counts(knowledge_list, days)
+    
+    # 全記事のIDでデフォルト値0の辞書を作成
+    stats = {}
+    for knowledge in knowledge_list:
+        stats[knowledge.id] = {
+            'views': view_counts.get(knowledge.id, 0),
+            'likes': like_counts.get(knowledge.id, 0),
+            'comments': comment_counts.get(knowledge.id, 0)
+        }
+    
+    return stats

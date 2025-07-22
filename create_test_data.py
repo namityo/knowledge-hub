@@ -22,7 +22,7 @@ import random
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import create_app
-from app.models import db, Knowledge, Comment, Like, CommentLike, Attachment, Tag
+from app.models import db, Knowledge, Comment, Like, CommentLike, Attachment, Tag, ViewHistory
 
 def create_test_data():
     """包括的なテストデータを作成"""
@@ -1788,6 +1788,70 @@ def login():
         print(f"\n🔥 人気タグ TOP5:")
         for i, tag in enumerate(popular_tags, 1):
             print(f"   {i}. {tag.name} ({tag.usage_count}回使用)")
+        
+        # 6. 閲覧履歴データの作成
+        print("\n👀 閲覧履歴データを作成中...")
+        
+        # 公開記事のみを対象にする
+        published_articles = Knowledge.query.filter_by(is_draft=False).all()
+        total_views = 0
+        
+        # 過去30日間の閲覧履歴を作成
+        for article in published_articles:
+            # 記事ごとに異なる人気度を設定（IDが小さいほど人気）
+            base_popularity = max(1, 21 - article.id)  # ID 1-20の記事で人気度を調整
+            view_probability = min(0.8, base_popularity / 20)  # 最大80%の確率
+            
+            # 過去30日間にわたって閲覧履歴を分散
+            for days_ago in range(30):
+                view_date = datetime.now(timezone.utc) - timedelta(days=days_ago)
+                
+                # 各ユーザーが各日にこの記事を閲覧するかどうかを決定
+                for user in users:
+                    # 自分の記事は閲覧しない
+                    if user == article.author:
+                        continue
+                    
+                    # 確率的に閲覧するかどうか決定
+                    if random.random() < view_probability:
+                        # 同日の重複をチェック（実際のアプリと同じロジック）
+                        existing_view = ViewHistory.query.filter(
+                            ViewHistory.user_id == user,
+                            ViewHistory.knowledge_id == article.id,
+                            db.func.date(ViewHistory.viewed_at) == view_date.date()
+                        ).first()
+                        
+                        if not existing_view:
+                            # 日中のランダムな時間を設定
+                            random_hour = random.randint(8, 22)  # 8時から22時の間
+                            random_minute = random.randint(0, 59)
+                            view_time = view_date.replace(
+                                hour=random_hour, 
+                                minute=random_minute, 
+                                second=random.randint(0, 59)
+                            )
+                            
+                            view_history = ViewHistory(
+                                user_id=user,
+                                knowledge_id=article.id,
+                                viewed_at=view_time
+                            )
+                            db.session.add(view_history)
+                            total_views += 1
+        
+        db.session.commit()
+        print(f"   ✅ {total_views}件の閲覧履歴を作成しました")
+        
+        # 更新された統計情報の表示
+        print("\n📊 作成されたテストデータの統計:")
+        print(f"   📚 記事総数: {Knowledge.query.count()}件")
+        print(f"   📖 公開記事: {Knowledge.query.filter_by(is_draft=False).count()}件")
+        print(f"   📝 下書き記事: {Knowledge.query.filter_by(is_draft=True).count()}件")
+        print(f"   🏷️  タグ総数: {Tag.query.count()}個")
+        print(f"   ❤️  いいね総数: {Like.query.count()}個")
+        print(f"   💬 コメント総数: {Comment.query.count()}個")
+        print(f"   👀 閲覧履歴総数: {ViewHistory.query.count()}件")
+        print(f"   👥 ユーザー数: {len(users)}人")
         
         print("\n✅ テストデータの作成が完了しました！")
         print("🚀 アプリケーションを起動して確認してください:")

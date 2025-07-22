@@ -97,8 +97,9 @@
                                 <small class="text-muted d-flex gap-3 flex-wrap">
                                     <span>作成者: {{ knowledge.author }}</span>
                                     <span>最終更新: {{ knowledge.updated_at|jst }}</span>
-                                    <span><i class="fas fa-heart text-danger"></i> {{ knowledge.likes|length }}</span>
-                                    <span><i class="fas fa-comments"></i> {{ knowledge.comments|length }}</span>
+                                    <span><i class="fas fa-eye text-primary"></i> {{ engagement_stats[knowledge.id].views }}</span>
+                                    <span><i class="fas fa-heart text-danger"></i> {{ engagement_stats[knowledge.id].likes }}</span>
+                                    <span><i class="fas fa-comments"></i> {{ engagement_stats[knowledge.id].comments }}</span>
                                     {% if knowledge.attachments|length > 0 %}
                                     <span><i class="fas fa-paperclip"></i> {{ knowledge.attachments|length }}</span>
                                     {% endif %}

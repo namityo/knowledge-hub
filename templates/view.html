@@ -90,8 +90,9 @@ function showImageModal(imageSrc, imageAlt) {
                     {% if knowledge.updated_at != knowledge.created_at %}
                     <span>更新日: {{ knowledge.updated_at|jst }}</span>
                     {% endif %}
-                    <span><i class="fas fa-heart text-danger"></i> {{ knowledge.likes|length }}</span>
-                    <span><i class="fas fa-comments"></i> {{ knowledge.comments|length }}</span>
+                    <span><i class="fas fa-eye text-primary"></i> {{ knowledge.get_view_count() }}</span>
+                    <span><i class="fas fa-heart text-danger"></i> {{ knowledge.get_like_count() }}</span>
+                    <span><i class="fas fa-comments"></i> {{ knowledge.get_comment_count() }}</span>
                 </p>
             </div>
             {% if knowledge.author == current_user_id %}

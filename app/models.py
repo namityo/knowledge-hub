@@ -27,6 +27,24 @@ class Knowledge(db.Model):
     attachments = db.relationship('Attachment', backref='knowledge', lazy=True, cascade='all, delete-orphan')
     # タグとのリレーションシップ（多対多）
     tags = db.relationship('Tag', secondary=knowledge_tags, lazy='subquery', backref=db.backref('knowledge_items', lazy=True))
+    # 閲覧履歴とのリレーションシップ
+    view_histories = db.relationship('ViewHistory', backref='knowledge', lazy=True, cascade='all, delete-orphan')
+    
+    # 統計取得メソッド群（統一されたAPI）
+    # 【個別記事用】get_xxx_count(): 総数取得（リレーションシップベース）
+    # 【複数記事用】utils.get_bulk_engagement_stats() でN+1問題を回避
+    
+    def get_view_count(self):
+        """総閲覧数を効率的に計算（リレーションシップベース）"""
+        return len(self.view_histories)
+    
+    def get_like_count(self):
+        """総いいね数を効率的に計算（リレーションシップベース）"""
+        return len(self.likes)
+    
+    def get_comment_count(self):
+        """総コメント数を効率的に計算（リレーションシップベース）"""
+        return len(self.comments)
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,3 +94,15 @@ class Tag(db.Model):
     
     def __repr__(self):
         return f'<Tag {self.name}>'
+
+class ViewHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=False)  # 閲覧したユーザー
+    knowledge_id = db.Column(db.Integer, db.ForeignKey('knowledge.id'), nullable=False)  # 閲覧された記事
+    viewed_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # 閲覧日時
+    
+    # 同一ユーザーが同一記事を同じ日に複数回閲覧しても1回とカウント
+    # 日付部分のみでユニーク制約を設定するため、アプリケーションレベルで制御
+    
+    def __repr__(self):
+        return f'<ViewHistory user:{self.user_id} knowledge:{self.knowledge_id} at:{self.viewed_at}>'

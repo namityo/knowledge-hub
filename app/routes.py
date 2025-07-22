@@ -3,8 +3,8 @@ import uuid
 from flask import render_template, request, redirect, url_for, flash, abort, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
 from datetime import datetime, timezone
-from .models import db, Knowledge, Comment, Like, CommentLike, Attachment, Tag
-from .utils import get_current_user_id, handle_file_uploads, handle_tags, audit_logger
+from .models import db, Knowledge, Comment, Like, CommentLike, Attachment, Tag, ViewHistory
+from .utils import get_current_user_id, handle_file_uploads, handle_tags, audit_logger, get_bulk_engagement_stats
 from .config import SYSTEM_TITLE, MAX_FILE_SIZE_MB, allowed_file
 
 def register_routes(app):
@@ -59,11 +59,15 @@ def register_routes(app):
         
         knowledge_list = pagination.items
         
+        # 一括でエンゲージメント統計を取得（N+1問題回避）
+        engagement_stats = get_bulk_engagement_stats(knowledge_list)
+        
         # タグ一覧を取得（使用回数順）
         all_tags = Tag.query.filter(Tag.usage_count > 0).order_by(Tag.usage_count.desc()).all()
         
         return render_template('index.html', 
                              knowledge_list=knowledge_list, 
+                             engagement_stats=engagement_stats,
                              current_user_id=current_user_id, 
                              search_query=search_query,
                              my_posts=my_posts,
@@ -115,6 +119,31 @@ def register_routes(app):
         comments = Comment.query.filter_by(knowledge_id=id).order_by(Comment.created_at.desc()).all()
         attachments = Attachment.query.filter_by(knowledge_id=id).order_by(Attachment.created_at.asc()).all()
         current_user_id = get_current_user_id()
+        
+        # 閲覧履歴を記録（作成者以外の場合のみ）
+        if knowledge.author != current_user_id:
+            # 今日の日付を取得
+            today = datetime.now(timezone.utc).date()
+            
+            # 同じユーザーが同じ記事を今日既に閲覧しているかチェック
+            existing_view_today = ViewHistory.query.filter(
+                ViewHistory.user_id == current_user_id,
+                ViewHistory.knowledge_id == id,
+                db.func.date(ViewHistory.viewed_at) == today
+            ).first()
+            
+            # 今日初回の閲覧の場合のみ記録
+            if not existing_view_today:
+                # 閲覧履歴を記録
+                view_history = ViewHistory(
+                    user_id=current_user_id,
+                    knowledge_id=id
+                )
+                db.session.add(view_history)
+                db.session.commit()
+                audit_logger.info(f"View history recorded - Knowledge ID:{id}, User:{current_user_id}")
+            else:
+                audit_logger.debug(f"Duplicate view today prevented - Knowledge ID:{id}, User:{current_user_id}")
         
         # 現在のユーザーがこのナレッジにいいねしているかチェック
         user_liked = Like.query.filter_by(user_id=current_user_id, knowledge_id=id).first() is not None
@@ -348,6 +377,49 @@ def register_routes(app):
                              draft_list=draft_list,
                              current_user_id=current_user_id,
                              pagination=pagination,
+                             system_title=SYSTEM_TITLE)
+
+    @app.route('/popular')
+    def popular():
+        """人気記事ページ - 直近一ヶ月のアクティビティでトップ3を表示"""
+        current_user_id = get_current_user_id()
+        
+        # 全記事を取得（下書きを除外）
+        all_knowledge = Knowledge.query.filter(Knowledge.is_draft == False).all()
+        
+        # 記事がない場合は空のリストを返す
+        if not all_knowledge:
+            return render_template('popular.html',
+                                 top_by_views=[],
+                                 top_by_likes=[],
+                                 top_by_comments=[],
+                                 current_user_id=current_user_id,
+                                 system_title=SYSTEM_TITLE)
+        
+        # 直近30日の統計を一括取得（効率的）
+        recent_stats = get_bulk_engagement_stats(all_knowledge, days=30)
+        
+        # 各記事に統計情報を付与
+        articles_with_stats = []
+        for knowledge in all_knowledge:
+            stats = recent_stats[knowledge.id]
+            articles_with_stats.append({
+                'knowledge': knowledge,
+                'recent_views': stats['views'],
+                'recent_likes': stats['likes'],
+                'recent_comments': stats['comments']
+            })
+        
+        # 各カテゴリでソートしてトップ3を取得
+        top_by_views_with_counts = sorted(articles_with_stats, key=lambda x: x['recent_views'], reverse=True)[:3]
+        top_by_likes_with_counts = sorted(articles_with_stats, key=lambda x: x['recent_likes'], reverse=True)[:3]
+        top_by_comments_with_counts = sorted(articles_with_stats, key=lambda x: x['recent_comments'], reverse=True)[:3]
+        
+        return render_template('popular.html',
+                             top_by_views=top_by_views_with_counts,
+                             top_by_likes=top_by_likes_with_counts,
+                             top_by_comments=top_by_comments_with_counts,
+                             current_user_id=current_user_id,
                              system_title=SYSTEM_TITLE)
 
     @app.route('/image/<int:attachment_id>')
